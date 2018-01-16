@@ -106,7 +106,7 @@ Resources:
   instanceTmAppliance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: !FindInMap 
+      ImageId: !FindInMap
         - threatManagerAMI
         - !Ref 'AWS::Region'
         - AMI
