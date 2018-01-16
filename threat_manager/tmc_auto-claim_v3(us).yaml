@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Alert Logic Threat Manager deployment with auto-claim feature enabled.
+  Includes Instance and Security Group excluding egress port 80 and ingress to
+  port 22 SSH. The appliance will use reverse ssh access from our DC. 
+Parameters:
+  vpcID:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: VPC into which Threat Manager will be deployed.
+  monitoringCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR netblock to be monitored. (Where agents will be installed)
+  subnetId:
+    Type: 'AWS::EC2::Subnet::Id'
+    Description: >-
+      ID of a private or public subnet into which Threat Manager will be
+      deployed.
+  instanceType:
+    Type: String
+    Description: EC2 Instance Type Threat Manager will be spun up as.
+    Default: c4.xlarge
+    AllowedValues:
+      - c3.large
+      - c3.xlarge
+      - c3.2xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+  subnetType:
+    Type: String
+    Description: Select if the subnet is a public or private subnet.
+    Default: Public
+    AllowedValues:
+      - Public
+      - Private
+Conditions:
+  AttachEIP: !Equals 
+    - Public
+    - !Ref subnetType
+Mappings:
+  threatManagerAMI:
+    ap-south-1:
+      AMI: ami-f6ccb499
+    eu-west-2:
+      AMI: ami-321d0c56
+    eu-west-1:
+      AMI: ami-b6c52ecf
+    ap-northeast-2:
+      AMI: ami-26a17848
+    ap-northeast-1:
+      AMI: ami-dd17f5bb
+    sa-east-1:
+      AMI: ami-a9b8cfc5
+    ca-central-1:
+      AMI: ami-9e0db2fa
+    ap-southeast-1:
+      AMI: ami-a4d24fc7
+    ap-southeast-2:
+      AMI: ami-9dbda2fe
+    eu-central-1:
+      AMI: ami-909438ff
+    us-east-1:
+      AMI: ami-c2a8f7b9
+    us-east-2:
+      AMI: ami-322f0f57
+    us-west-1:
+      AMI: ami-8b765eeb
+    us-west-2:
+      AMI: ami-cb9f85b2
+    us-gov-west-1:
+      AMI: ami-89df5ce8
+Resources:
+  sgThreatManager:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Alert Logic Threat Manager Security Group
+      VpcId: !Ref vpcID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: !Ref monitoringCIDR
+          FromPort: '7777'
+          ToPort: '7777'
+        - IpProtocol: tcp
+          CidrIp: !Ref monitoringCIDR
+          FromPort: '443'
+          ToPort: '443'
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          CidrIp: 204.110.218.96/27
+          FromPort: '443'
+          ToPort: '443'
+        - IpProtocol: tcp
+          CidrIp: 204.110.219.96/27
+          FromPort: '443'
+          ToPort: '443'
+        - IpProtocol: tcp
+          CidrIp: 208.71.209.32/27
+          FromPort: '443'
+          ToPort: '443'
+        - IpProtocol: tcp
+          CidrIp: 204.110.218.96/27
+          FromPort: '4138'
+          ToPort: '4138'
+        - IpProtocol: tcp
+          CidrIp: 204.110.219.96/27
+          FromPort: '4138'
+          ToPort: '4138'
+        - IpProtocol: tcp
+          CidrIp: 208.71.209.32/27
+          FromPort: '4138'
+          ToPort: '4138'
+        - IpProtocol: udp
+          CidrIp: 8.8.8.8/32
+          FromPort: '53'
+          ToPort: '53'
+        - IpProtocol: udp
+          CidrIp: 8.8.4.4/32
+          FromPort: '53'
+          ToPort: '53'
+        - IpProtocol: tcp
+          CidrIp: 8.8.8.8/32
+          FromPort: '53'
+          ToPort: '53'
+        - IpProtocol: tcp
+          CidrIp: 8.8.4.4/32
+          FromPort: '53'
+          ToPort: '53'
+      Tags:
+        - Key: Name
+          Value: Alert Logic Threat Manager Security Group
+  instanceTmAppliance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !FindInMap 
+        - threatManagerAMI
+        - !Ref 'AWS::Region'
+        - AMI
+      InstanceType: !Ref instanceType
+      NetworkInterfaces:
+        - GroupSet:
+            - !Ref sgThreatManager
+          AssociatePublicIpAddress: !If 
+            - AttachEIP
+            - 'true'
+            - 'false'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId: !Ref subnetId
+      Tags:
+        - Key: Name
+          Value: Alert Logic Threat Manager
+    DependsOn: sgThreatManager
+  tmcEIP:
+    Type: 'AWS::EC2::EIP'
+    Condition: AttachEIP
+    Properties:
+      InstanceId: !Ref instanceTmAppliance
+      Domain: vpc
+    DependsOn: instanceTmAppliance
+Outputs:
+  agentSecurityGroupID:
+    Value: !Ref sgThreatManager
+    Description: >-
+      Copy this Security Group ID into the destination fields of the new egress
+      rules for the Agents' Security Groups.
