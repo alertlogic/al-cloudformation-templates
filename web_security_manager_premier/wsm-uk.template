@@ -1,0 +1,1611 @@
+{
+    "Conditions": {
+        "AlertLogicCheck": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AlertLogic"
+                },
+                "true"
+            ]
+        },
+        "CreateCPUAlarm": {
+            "Fn::And": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "wsmScalingAlarmType"
+                        },
+                        "CPU"
+                    ]
+                },
+                {
+                    "Condition": "AlertLogicCheck"
+                }
+            ]
+        },
+        "CreateMemoryAlarm": {
+            "Fn::And": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "wsmScalingAlarmType"
+                        },
+                        "Memory"
+                    ]
+                },
+                {
+                    "Condition": "AlertLogicCheck"
+                }
+            ]
+        },
+        "CustomDomain": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ZoneApex"
+                        },
+                        "None"
+                    ]
+                }
+            ]
+        },
+        "ProdCheck": {
+            "Fn::Or": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "Environment"
+                        },
+                        "prod"
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "Environment"
+                        },
+                        "staging"
+                    ]
+                }
+            ]
+        }
+    },
+    "Mappings": {
+        "ALMasterEBSVolumeSize": {
+            "m3.large": {
+                "EBS": "200"
+            },
+            "m3.medium": {
+                "EBS": "100"
+            },
+            "m3.xlarge": {
+                "EBS": "300"
+            }
+        },
+        "ALRegionWsmAmi": {
+            "ap-northeast-1": {
+                "64": "ami-db1f74da"
+            },
+            "ap-southeast-1": {
+                "64": "ami-7c74292e"
+            },
+            "ap-southeast-2": {
+                "64": "ami-dd6ef0e7"
+            },
+            "eu-central-1": {
+                "64": "ami-503f034d"
+            },
+            "eu-west-1": {
+                "64": "ami-febf4989"
+            },
+            "sa-east-1": {
+                "64": "ami-55238348"
+            },
+            "us-east-1": {
+                "64": "ami-a3734aca"
+            },
+            "us-west-1": {
+                "64": "ami-064f7243"
+            },
+            "us-west-2": {
+                "64": "ami-b2345782"
+            }
+        },
+        "AlertLogicDataCenters": {
+            "UK": {
+                "accessRange1": "185.54.124.0/24",
+                "accessRange2": "185.54.124.0/24",
+                "accessRange3": "185.54.124.0/24",
+                "receiverAddress": "185.54.124.97",
+                "receiverHostname": "al-receiver.alertlogic.net",
+                "vaporatorAddress": "185.54.124.102",
+                "vaporatorHostname": "vaporator.alertlogic.com"
+            },
+            "US": {
+                "accessRange1": "204.110.218.96/27",
+                "accessRange2": "204.110.219.96/27",
+                "accessRange3": "216.52.175.192/26",
+                "receiverAddress": "204.110.219.98",
+                "receiverHostname": "al-receiver.alertlogic.net",
+                "vaporatorAddress": "204.110.219.102",
+                "vaporatorHostname": "vaporator.alertlogic.com"
+            }
+        }
+    },
+    "Parameters": {
+        "AlertLogic": {
+            "AllowedValues": [
+                "false",
+                "true"
+            ],
+            "Default": "false",
+            "Description": "Enable or Disable AlertLogic in this environment",
+            "Type": "String"
+        },
+        "Environment": {
+            "Description": "The environment being deployed into",
+            "Type": "String"
+        },
+        "SSLCertArn": {
+            "Default": "false",
+            "Description": "SSL Certificate ARN from network stack",
+            "Type": "String"
+        },
+        "ScaleCapacityMax": {
+            "Default": "15",
+            "Description": "Maximum number of servers to run",
+            "Type": "String"
+        },
+        "SecuritySubnet": {
+            "Default": "false",
+            "Description": "Security Subnet Created by Network stack",
+            "Type": "String"
+        },
+        "Service": {
+            "Description": "Service Name",
+            "Type": "String"
+        },
+        "Version": {
+            "Description": "Version",
+            "Type": "String"
+        },
+        "ZoneApex": {
+            "Default": "None",
+            "Description": "The DNS name of an existing Amazon Route 53 hosted zone",
+            "Type": "String"
+        },
+        "alertLogicDataCenter": {
+            "AllowedValues": [
+                "US",
+                "UK"
+            ],
+            "ConstraintDescription": "Please enter either US or UK",
+            "Default": "US",
+            "Description": "AlertLogic Data Center to use as backend (US/UK)",
+            "Type": "String"
+        },
+        "asScaleDownCPUth": {
+            "AllowedPattern": "([345][0-9]|60)",
+            "ConstraintDescription": "asScaleDownCPUth: Please enter a number between 30 and 60 inclusive",
+            "Default": "50",
+            "Description": "Auto Scaling Scale DOWN CPU utilization threshold in percent",
+            "Type": "String"
+        },
+        "asScaleDownTimeInterval": {
+            "Default": "600",
+            "Description": "asScaleDownTimeInterval: Time interval in seconds for when the Worker pool should be scaled down if CPU has been below threshold",
+            "Type": "String"
+        },
+        "asScaleUpCPUth": {
+            "AllowedPattern": "([78][0-9]|90)",
+            "ConstraintDescription": "asScaleUpCPUth: Please enter a number between 70 and 90 inclusive",
+            "Default": "80",
+            "Description": "Auto Scaling Scale UP CPU utilization threshold in percent",
+            "Type": "String"
+        },
+        "asScaleUpTimeInterval": {
+            "Default": "120",
+            "Description": "asScaleUpTimeInterval: Time interval in seconds for when additional WSM workers should be added to the Worker pool if CPU has been above threshold",
+            "Type": "String"
+        },
+        "publicSubnetA": {
+            "Default": "false",
+            "Description": "Public Subnet Created by Network stack",
+            "Type": "String"
+        },
+        "publicSubnetB": {
+            "Default": "false",
+            "Description": "Public Subnet Created by Network stack",
+            "Type": "String"
+        },
+        "publicSubnetC": {
+            "Default": "false",
+            "Description": "Public Subnet Created by Network stack",
+            "Type": "String"
+        },
+        "vpcID": {
+            "Default": "false",
+            "Description": "VPC ID where WSM resources will be deployed",
+            "Type": "String"
+        },
+        "wsmBypass": {
+            "AllowedValues": [
+                "false",
+                "true"
+            ],
+            "Default": "false",
+            "Description": "Bypass AlertLogic WAF in CloudFront",
+            "Type": "String"
+        },
+        "wsmLicense": {
+            "AllowedPattern": "[a-f0-9]{50}",
+            "ConstraintDescription": "wsmLicense: Please enter your Alert Logic Registration Key.  ",
+            "Default": "9e0c29ec3d9318c5a4712e5669ef874457b936a0061d33cd8e",
+            "Description": "Your WSM license key.  This can be located at https://invision.alertlogic.net/wsm/support",
+            "Type": "String"
+        },
+        "wsmMasterInstanceType": {
+            "AllowedValues": [
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge"
+            ],
+            "Default": "m3.medium",
+            "Description": "AWS instance type for WSM master appliance.",
+            "Type": "String"
+        },
+        "wsmPassword": {
+            "Default": "AL.password.1",
+            "Description": "Emergency access: password for WSM appliance mangement interface (8 characters minimum)",
+            "MinLength": "8",
+            "NoEcho": true,
+            "Type": "String"
+        },
+        "wsmScalingAlarmType": {
+            "AllowedValues": [
+                "CPU",
+                "Memory"
+            ],
+            "Default": "CPU",
+            "Description": "Select the autoscaling alarm type.",
+            "Type": "String"
+        },
+        "wsmUser": {
+            "Default": "ALAdmin",
+            "Description": "Emergency access: username for WSM appliance mangement interface",
+            "Type": "String"
+        },
+        "wsmWorkerInstanceType": {
+            "AllowedValues": [
+                "m3.medium",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge"
+            ],
+            "Default": "c3.large",
+            "Description": "AWS instance type for WSM worker appliances",
+            "Type": "String"
+        },
+        "wsmWorkerInstanceVolumeSize": {
+            "Default": "16",
+            "Description": "Size (in GB) of worker EBS volume. Default value should be increased to at least 100GB if static content caching is enabled.",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AlertLogicBucket": {
+            "Condition": "AlertLogicCheck",
+            "DeletionPolicy": "Retain",
+            "Type": "AWS::S3::Bucket"
+        },
+        "AlertLogicCloudWatchPublishAccess": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "cloudwatch:PutMetricData"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                "*"
+                            ],
+                            "Sid": "PublishMetrics"
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "PolicyName": "AlertLogicCloudWatchPublishAccess",
+                "Roles": [
+                    {
+                        "Ref": "AlertLogicRole"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::Policy"
+        },
+        "AlertLogicRole": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Path": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "/",
+                            {
+                                "Ref": "Service"
+                            },
+                            "/",
+                            {
+                                "Ref": "Environment"
+                            },
+                            "/"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "AlertLogicS3": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "s3:ListBucket",
+                                "s3:GetBucketLocation",
+                                "s3:ListBucketMultipartUploads"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::",
+                                            {
+                                                "Ref": "AlertLogicBucket"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            ],
+                            "Sid": "ListAccess"
+                        },
+                        {
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:PutObject"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::",
+                                            {
+                                                "Ref": "AlertLogicBucket"
+                                            },
+                                            "/*"
+                                        ]
+                                    ]
+                                }
+                            ],
+                            "Sid": "ObjectAccess"
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "PolicyName": "AlertLogicS3BucketAccess",
+                "Roles": [
+                    {
+                        "Ref": "AlertLogicRole"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::Policy"
+        },
+        "AlertLogicVolumeLog": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        "0",
+                        {
+                            "Fn::GetAZs": {
+                                "Ref": "AWS::Region"
+                            }
+                        }
+                    ]
+                },
+                "Size": {
+                    "Fn::FindInMap": [
+                        "ALMasterEBSVolumeSize",
+                        {
+                            "Ref": "wsmMasterInstanceType"
+                        },
+                        "EBS"
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "WSM Master Log Volume"
+                    }
+                ],
+                "VolumeType": "gp2"
+            },
+            "Type": "AWS::EC2::Volume"
+        },
+        "alarmWSMCPUHighWorkers": {
+            "Condition": "CreateCPUAlarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "policyWSMScaleUpWorkers"
+                    }
+                ],
+                "AlarmDescription": "Alarm if CPU too high or metric disappears indicating instance is down",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "AutoScalingGroupName",
+                        "Value": {
+                            "Ref": "asgWSMWorker"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "2",
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Period": {
+                    "Ref": "asScaleUpTimeInterval"
+                },
+                "Statistic": "Average",
+                "Threshold": {
+                    "Ref": "asScaleUpCPUth"
+                }
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "alarmWSMCPULowWorkers": {
+            "Condition": "CreateCPUAlarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "policyWSMScaleDownWorkers"
+                    }
+                ],
+                "AlarmDescription": "Alarm if CPU too low",
+                "ComparisonOperator": "LessThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "AutoScalingGroupName",
+                        "Value": {
+                            "Ref": "asgWSMWorker"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "2",
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Period": {
+                    "Ref": "asScaleDownTimeInterval"
+                },
+                "Statistic": "Average",
+                "Threshold": {
+                    "Ref": "asScaleDownCPUth"
+                }
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "alarmWSMMemHighWorkers": {
+            "Condition": "CreateMemoryAlarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "policyWSMScaleUpWorkers"
+                    }
+                ],
+                "AlarmDescription": "Alarm if memory too high or metric disappears indicating instance is down",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "WorkerElbName",
+                        "Value": {
+                            "Ref": "elbWSMWorker"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "2",
+                "MetricName": "MemUtilization",
+                "Namespace": "AlertLogic/System",
+                "Period": "60",
+                "Statistic": "Average",
+                "Threshold": "85"
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "alarmWSMMemLowWorkers": {
+            "Condition": "CreateMemoryAlarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "policyWSMScaleDownWorkers"
+                    }
+                ],
+                "AlarmDescription": "Alarm if memory too low",
+                "ComparisonOperator": "LessThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "WorkerElbName",
+                        "Value": {
+                            "Ref": "elbWSMWorker"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "10",
+                "MetricName": "MemUtilization",
+                "Namespace": "AlertLogic/System",
+                "Period": "60",
+                "Statistic": "Average",
+                "Threshold": "70"
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "asgWSMMaster": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "AvailabilityZones": [
+                    "eu-west-1a"
+                ],
+                "Cooldown": "300",
+                "DesiredCapacity": "1",
+                "HealthCheckGracePeriod": 1800,
+                "HealthCheckType": "ELB",
+                "LaunchConfigurationName": {
+                    "Ref": "lcWSMMaster"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "elbWSMMaster"
+                    }
+                ],
+                "MaxSize": "1",
+                "MinSize": "1",
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Service",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "Service"
+                        }
+                    },
+                    {
+                        "Key": "Version",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "Version"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "Service"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "-WSM-master"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    "subnet-b0a4e8c6"
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "asgWSMWorker": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "AvailabilityZones": [
+                    "eu-west-1a",
+                    "eu-west-1b",
+                    "eu-west-1c"
+                ],
+                "Cooldown": "300",
+                "DesiredCapacity": {
+                    "Fn::If": [
+                        "ProdCheck",
+                        "3",
+                        "1"
+                    ]
+                },
+                "HealthCheckGracePeriod": 1800,
+                "HealthCheckType": "ELB",
+                "LaunchConfigurationName": {
+                    "Ref": "lcWSMWorker"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "elbWSMWorker"
+                    }
+                ],
+                "MaxSize": {
+                    "Ref": "ScaleCapacityMax"
+                },
+                "MinSize": {
+                    "Fn::If": [
+                        "ProdCheck",
+                        "3",
+                        "1"
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Service",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "Service"
+                        }
+                    },
+                    {
+                        "Key": "Version",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "Version"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "Service"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "-WSM-worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "publicSubnetA"
+                    },
+                    {
+                        "Ref": "publicSubnetB"
+                    },
+                    {
+                        "Ref": "publicSubnetC"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "elbWSMMaster": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "30",
+                    "Target": "HTTP:4848/healthcheck.html",
+                    "Timeout": "5",
+                    "UnhealthyThreshold": "5"
+                },
+                "Listeners": [
+                    {
+                        "InstancePort": "22",
+                        "InstanceProtocol": "TCP",
+                        "LoadBalancerPort": "2222",
+                        "Protocol": "TCP"
+                    },
+                    {
+                        "InstancePort": "4849",
+                        "InstanceProtocol": "TCP",
+                        "LoadBalancerPort": "4849",
+                        "Protocol": "TCP"
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "sgELBMaster"
+                    }
+                ],
+                "Subnets": [
+                    "subnet-b0a4e8c6"
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "elbWSMWorker": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "30",
+                    "Target": "HTTP:4848/healthcheck.html",
+                    "Timeout": "5",
+                    "UnhealthyThreshold": "5"
+                },
+                "Listeners": [
+                    {
+                        "InstancePort": "80",
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": {
+                            "Fn::If": [
+                                "CustomDomain",
+                                "443",
+                                "8080"
+                            ]
+                        },
+                        "Protocol": {
+                            "Fn::If": [
+                                "CustomDomain",
+                                "HTTPS",
+                                "HTTP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "CustomDomain",
+                                {
+                                    "Ref": "SSLCertArn"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "sgELBWorker"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "publicSubnetA"
+                    },
+                    {
+                        "Ref": "publicSubnetB"
+                    },
+                    {
+                        "Ref": "publicSubnetC"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "iamWSMEBSAccess": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ec2:AttachVolume",
+                                "ec2:DescribeVolumeAttribute",
+                                "ec2:DescribeVolumeStatus",
+                                "ec2:DescribeVolumes",
+                                "ec2:DetachVolume"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": "*",
+                            "Sid": "EBSAccess"
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "PolicyName": "iamWSMEBSAccess",
+                "Roles": [
+                    {
+                        "Ref": "AlertLogicRole"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::Policy"
+        },
+        "iamWSMInstanceProfileMaster": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "Path": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "/",
+                            {
+                                "Ref": "Service"
+                            },
+                            "/",
+                            {
+                                "Ref": "Environment"
+                            },
+                            "/"
+                        ]
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "AlertLogicRole"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::InstanceProfile"
+        },
+        "lcWSMMaster": {
+            "Condition": "AlertLogicCheck",
+            "DependsOn": "iamWSMInstanceProfileMaster",
+            "Properties": {
+                "AssociatePublicIpAddress": "true",
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": 80,
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "iamWSMInstanceProfileMaster"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "ALRegionWsmAmi",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "wsmMasterInstanceType"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sgWSMMaster"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "{\"alertlogic\": {\"wsm\": {\"role\" : \"master\",  ",
+                                "\"license\" : \"",
+                                {
+                                    "Ref": "wsmLicense"
+                                },
+                                "\", ",
+                                "\"user\" : \"",
+                                {
+                                    "Ref": "wsmUser"
+                                },
+                                "\", \"password\" : \"",
+                                {
+                                    "Ref": "wsmPassword"
+                                },
+                                "\", ",
+                                "\"S3BucketName\" : \"",
+                                {
+                                    "Ref": "AlertLogicBucket"
+                                },
+                                "\", ",
+                                "\"EbsLogVolume\" : \"",
+                                {
+                                    "Ref": "AlertLogicVolumeLog"
+                                },
+                                "\", ",
+                                "\"MasterElbDnsName\" : \"",
+                                {
+                                    "Fn::GetAtt": [
+                                        "elbWSMMaster",
+                                        "DNSName"
+                                    ]
+                                },
+                                "\", ",
+                                "\"WorkerElbDnsName\" : \"",
+                                {
+                                    "Fn::GetAtt": [
+                                        "elbWSMWorker",
+                                        "DNSName"
+                                    ]
+                                },
+                                "\", ",
+                                "\"BackendElbDnsName\" : \"",
+                                "network-p-RPLoadBa-1WVVTLMT7TQZA-552039195.eu-west-1.elb.amazonaws.com",
+                                "\", ",
+                                "\"hosts\": [{\"hostname\" : \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "receiverHostname"
+                                    ]
+                                },
+                                "\", ",
+                                "\"address\": \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "receiverAddress"
+                                    ]
+                                },
+                                "\"}, ",
+                                "{\"hostname\": \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "vaporatorHostname"
+                                    ]
+                                },
+                                "\", ",
+                                "\"address\": \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "vaporatorAddress"
+                                    ]
+                                },
+                                "\"}]}}}"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "lcWSMWorker": {
+            "Condition": "AlertLogicCheck",
+            "DependsOn": "iamWSMInstanceProfileMaster",
+            "Properties": {
+                "AssociatePublicIpAddress": "true",
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": {
+                                "Ref": "wsmWorkerInstanceVolumeSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "iamWSMInstanceProfileMaster"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "ALRegionWsmAmi",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "wsmWorkerInstanceType"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sgWSMWorker"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "{\"alertlogic\": {\"wsm\": {\"role\" : \"worker\",  \"license\" : \"",
+                                {
+                                    "Ref": "wsmLicense"
+                                },
+                                "\", ",
+                                "\"S3BucketName\" : \"",
+                                {
+                                    "Ref": "AlertLogicBucket"
+                                },
+                                "\", \"WorkerElbName\" : \"",
+                                {
+                                    "Ref": "elbWSMWorker"
+                                },
+                                "\", ",
+                                "\"BackendElbDnsName\" : \"",
+                                "network-p-RPLoadBa-1WVVTLMT7TQZA-552039195.eu-west-1.elb.amazonaws.com",
+                                "\", ",
+                                "\"hosts\": [{\"hostname\" : \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "receiverHostname"
+                                    ]
+                                },
+                                "\", ",
+                                "\"address\": \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "receiverAddress"
+                                    ]
+                                },
+                                "\"}, ",
+                                "{\"hostname\": \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "vaporatorHostname"
+                                    ]
+                                },
+                                "\", ",
+                                "\"address\": \"",
+                                {
+                                    "Fn::FindInMap": [
+                                        "AlertLogicDataCenters",
+                                        {
+                                            "Ref": "alertLogicDataCenter"
+                                        },
+                                        "vaporatorAddress"
+                                    ]
+                                },
+                                "\"}]}}}"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "policyWSMScaleDownWorkers": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {
+                    "Ref": "asgWSMWorker"
+                },
+                "Cooldown": "1",
+                "ScalingAdjustment": "-2"
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "policyWSMScaleUpWorkers": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {
+                    "Ref": "asgWSMWorker"
+                },
+                "Cooldown": "1",
+                "ScalingAdjustment": "2"
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "sgELBMaster": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "GroupDescription": "Security group for WSM master ELB",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {
+                            "Fn::FindInMap": [
+                                "AlertLogicDataCenters",
+                                {
+                                    "Ref": "alertLogicDataCenter"
+                                },
+                                "accessRange1"
+                            ]
+                        },
+                        "FromPort": "4849",
+                        "IpProtocol": "tcp",
+                        "ToPort": "4849"
+                    },
+                    {
+                        "CidrIp": {
+                            "Fn::FindInMap": [
+                                "AlertLogicDataCenters",
+                                {
+                                    "Ref": "alertLogicDataCenter"
+                                },
+                                "accessRange1"
+                            ]
+                        },
+                        "FromPort": "2222",
+                        "IpProtocol": "tcp",
+                        "ToPort": "2222"
+                    },
+                    {
+                        "CidrIp": {
+                            "Fn::FindInMap": [
+                                "AlertLogicDataCenters",
+                                {
+                                    "Ref": "alertLogicDataCenter"
+                                },
+                                "accessRange2"
+                            ]
+                        },
+                        "FromPort": "4849",
+                        "IpProtocol": "tcp",
+                        "ToPort": "4849"
+                    },
+                    {
+                        "CidrIp": {
+                            "Fn::FindInMap": [
+                                "AlertLogicDataCenters",
+                                {
+                                    "Ref": "alertLogicDataCenter"
+                                },
+                                "accessRange2"
+                            ]
+                        },
+                        "FromPort": "2222",
+                        "IpProtocol": "tcp",
+                        "ToPort": "2222"
+                    },
+                    {
+                        "CidrIp": {
+                            "Fn::FindInMap": [
+                                "AlertLogicDataCenters",
+                                {
+                                    "Ref": "alertLogicDataCenter"
+                                },
+                                "accessRange3"
+                            ]
+                        },
+                        "FromPort": "4849",
+                        "IpProtocol": "tcp",
+                        "ToPort": "4849"
+                    },
+                    {
+                        "CidrIp": {
+                            "Fn::FindInMap": [
+                                "AlertLogicDataCenters",
+                                {
+                                    "Ref": "alertLogicDataCenter"
+                                },
+                                "accessRange3"
+                            ]
+                        },
+                        "FromPort": "5666",
+                        "IpProtocol": "tcp",
+                        "ToPort": "5666"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "vpcID"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "sgELBWorker": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "GroupDescription": "Security group for WSM worker ELB",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "ToPort": "443"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "vpcID"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "sgWSMELBMasterEgress22": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "22",
+                "GroupId": {
+                    "Ref": "sgELBMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "ToPort": "22"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMELBMasterEgress4848to4849": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "4848",
+                "GroupId": {
+                    "Ref": "sgELBMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "ToPort": "4849"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMELBWorkerEgress443": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "443",
+                "GroupId": {
+                    "Ref": "sgELBWorker"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "443"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMELBWorkerEgress4848": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "4848",
+                "GroupId": {
+                    "Ref": "sgELBWorker"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "4848"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMELBWorkerEgress80": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "80",
+                "GroupId": {
+                    "Ref": "sgELBWorker"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "80"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMMaster": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "GroupDescription": "Security group for WSM master",
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "ToPort": "443"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "vpcID"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "sgWSMMasterEgress22": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "22",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "22"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMMasterEgress5559to5560": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "5559",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "5560"
+            },
+            "Type": "AWS::EC2::SecurityGroupEgress"
+        },
+        "sgWSMMasterIgress514": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "514",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "udp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "514"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMMasterIngress123": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "123",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "udp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "123"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMMasterIngress22": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "22",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgELBMaster"
+                },
+                "ToPort": "22"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMMasterIngress2625": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "2625",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "2625"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMMasterIngress4848to4849": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "4848",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgELBMaster"
+                },
+                "ToPort": "4849"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMMasterIngress5556": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "5556",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "5556"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMMasterIngress5559to5560": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "FromPort": "5559",
+                "GroupId": {
+                    "Ref": "sgWSMMaster"
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "sgWSMWorker"
+                },
+                "ToPort": "5560"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "sgWSMWorker": {
+            "Condition": "AlertLogicCheck",
+            "Properties": {
+                "GroupDescription": "Security group for WSM workers",
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "ToPort": "443"
+                    },
+                    {
+                        "FromPort": "123",
+                        "IpProtocol": "udp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "123"
+                    },
+                    {
+                        "FromPort": "514",
+                        "IpProtocol": "udp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "514"
+                    },
+                    {
+                        "FromPort": "5556",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "5556"
+                    },
+                    {
+                        "FromPort": "5559",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "5560"
+                    },
+                    {
+                        "FromPort": "2625",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "2625"
+                    }
+                ],
+                "SecurityGroupIngress": [
+                    {
+                        "FromPort": "22",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "22"
+                    },
+                    {
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgELBWorker"
+                        },
+                        "ToPort": "80"
+                    },
+                    {
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgELBWorker"
+                        },
+                        "ToPort": "443"
+                    },
+                    {
+                        "FromPort": "4848",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgELBWorker"
+                        },
+                        "ToPort": "4849"
+                    },
+                    {
+                        "FromPort": "5559",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "sgWSMMaster"
+                        },
+                        "ToPort": "5560"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "vpcID"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        }
+    }
+}

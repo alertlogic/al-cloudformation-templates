@@ -1,0 +1,158 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Alert Logic Role for Cloud Insight Cross-account CloudTrail access to create a separate IAM role for the AWS CloudTrail account. Creates IAM role/policy.",
+  "Parameters": {
+    "AlertLogicDatacenter": {
+      "Description": "Alert Logic Datacenter into which your account was deployed.",
+      "AllowedValues": [
+        "US",
+        "EU"
+      ],
+      "Default": "US",
+      "Type": "String"
+    },
+    "ExternalID": {
+      "Description": "A unique identifier that is used by AlertLogic when assuming roles in the account. This is entered into the Alert Logic Portal later on. More information can be found on the following page in AWS's IAM Documentation: http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html",
+      "AllowedPattern": "[\\w+=,.@:\\/-]*",
+      "ConstraintDescription": "The format for this parameter is a string of characters consisting of 2-1224 upper and lower case alphanumeric characters with no spaces. You can also include underscores or any of the following characters: =,.@:\\/-",
+      "MinLength": 2,
+      "MaxLength": 1224,
+      "Type": "String",
+      "NoEcho": "true"
+    }
+  },
+  "Mappings": {
+    "AlertLogic": {
+      "Datacenter": {
+        "US": "arn:aws:iam::733251395267:root",
+        "EU": "arn:aws:iam::857795874556:root"
+      }
+    }
+  },
+  "Resources": {
+    "AlertLogicRole": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [{
+            "Action": "sts:AssumeRole",
+            "Condition": {
+              "StringEquals": {
+                "sts:ExternalId": {
+                  "Ref": "ExternalID"
+                }
+              }
+            },
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": [{
+                "Fn::FindInMap": ["AlertLogic", "Datacenter", {
+                  "Ref": "AlertLogicDatacenter"
+                }]
+              }]
+            },
+            "Sid": ""
+          }],
+          "Version": "2012-10-17"
+        },
+        "Path": "/",
+        "Policies": [{
+          "PolicyDocument": {
+            "Statement": [{
+                "Sid": "ReadExistingCloudTrailsTopic",
+                "Effect": "Allow",
+                "Action": [
+                  "sns:gettopicattributes",
+                  "sns:listtopics",
+                  "sns:settopicattributes",
+                  "sns:subscribe"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Sid": "BeAbleToListSQS",
+                "Effect": "Allow",
+                "Action": [
+                  "sqs:ListQueues"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Sid": "CreateAlertLogicSqsQueueToSubscribeToCloudTrailsSnsTopicNotifications",
+                "Effect": "Allow",
+                "Action": [
+                  "sqs:CreateQueue",
+                  "sqs:DeleteQueue",
+                  "sqs:SetQueueAttributes",
+                  "sqs:GetQueueAttributes",
+                  "sqs:ReceiveMessage",
+                  "sqs:DeleteMessage",
+                  "sqs:GetQueueUrl"
+                ],
+                "Resource": "arn:aws:sqs:*:*:outcomesbucket*"
+              },
+              {
+                "Sid": "ReadExistingCloudTrailS3Bucket",
+                "Effect": "Allow",
+                "Action": [
+                  "s3:GetBucketPolicy",
+                  "s3:ListBucket",
+                  "s3:GetBucketLocation",
+                  "s3:GetObject"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Sid": "CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails",
+                "Effect": "Allow",
+                "Action": [
+                  "sns:CreateTopic",
+                  "sns:DeleteTopic"
+                ],
+                "Resource": "arn:aws:sns:*:*:outcomestopic-*"
+              },
+              {
+                "Sid": "CreateCloudTrailS3BucketIfCloudTrailsAreBeingSetupByAlertLogic",
+                "Effect": "Allow",
+                "Action": [
+                  "s3:CreateBucket",
+                  "s3:PutBucketPolicy",
+                  "s3:DeleteBucket"
+                ],
+                "Resource": "arn:aws:s3:::outcomesbucket-*"
+              },
+              {
+                "Sid": "BeAbleToValidateOurRoleAndDiscoverIAM",
+                "Effect": "Allow",
+                "Action": [
+                  "iam:List*",
+                  "iam:Get*"
+                ],
+                "Resource": "*"
+              }
+            ],
+            "Version": "2012-10-17"
+          },
+          "PolicyName": "alertlogic-cloudinsight-cross-account-cloudtrail-iam-policy"
+        }]
+      },
+      "Type": "AWS::IAM::Role"
+    }
+  },
+  "Outputs": {
+    "ExternalID": {
+      "Description": "External ID used by Alert Logic to assume your new Cross-Account IAM role.",
+      "Value": {
+        "Ref": "ExternalID"
+      }
+    },
+    "RoleARN": {
+      "Description": "Amazon Resource Name of your new Cross-Account IAM Role.",
+      "Value": {
+        "Fn::GetAtt": [
+          "AlertLogicRole",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

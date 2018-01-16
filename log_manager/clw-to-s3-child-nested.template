@@ -1,0 +1,57 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "CloudWatch Log export to S3 Bucket via Kinesis Stream and Lambda - child nested template",
+  "Parameters": {
+    "KinesisStreamArn": {
+      "Description": "ARN of the Kinesis Stream that you pre-built",
+      "Type": "String"
+    },
+    "SubscriptionFilterPattern": {
+      "Description": "Specify the CloudWatch subscription filter to be used to filter data sent to the S3.",
+      "Type": "String"
+    },
+    "CloudWatchLogGroup": {
+      "Description": "The name of the CloudWatch Logs Group to export to S3 bucket.",
+      "Type": "String"
+    },
+    "CloudWatchLogsKinesisRoleArn": {
+      "Description": "ARN of IAM Role to allow Kinesis to subscribe to CloudWatch Log",
+      "Type": "String"
+    },
+    "LambdaDriverFunctionArn": {
+      "Description": "ARN of the Lambda Driver Function",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "KinesisEventSourceMapping": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "Properties": {
+        "EventSourceArn": {
+          "Ref": "KinesisStreamArn"
+        },
+        "FunctionName": {
+          "Ref": "LambdaDriverFunctionArn"
+        },
+        "StartingPosition": "TRIM_HORIZON"
+      }
+    },
+    "PutSubscriptionFilter": {
+      "Type": "AWS::Logs::SubscriptionFilter",
+      "Properties": {
+        "DestinationArn": {
+          "Ref": "KinesisStreamArn"
+        },
+        "FilterPattern": {
+          "Ref": "SubscriptionFilterPattern"
+        },
+        "LogGroupName": {
+          "Ref": "CloudWatchLogGroup"
+        },
+        "RoleArn": {
+          "Ref": "CloudWatchLogsKinesisRoleArn"
+        }
+      }
+    }
+  }
+}

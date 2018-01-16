@@ -1,0 +1,481 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alert Logic Web Security Manager 4.5.1.0-1, HA, cftypes, 1 ELB",
+    "Parameters": {
+        "vpc": {
+            "Type": "AWS::EC2::VPC::Id",
+            "Description": "VPC ID (e.g. vpc-abcd0123) where WSM will be deployed.",
+            "AllowedPattern": "vpc-[a-f0-9]{8}",
+            "ConstraintDescription": "vpc: Please enter an existing vpc ID (vpc-abcd0123)"
+        },
+        "subnetPrimary": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "The subnet ID (e.g. subnet-abcd0123) of a existing subnet where the primary WSM instance will be created.  This subnet must be a public subnet.",
+            "AllowedPattern": "subnet-[a-f0-9]{8}",
+            "ConstraintDescription": "subnetPrimary: Please enter an existing subnet ID (subnet-abcd0123)"
+        },
+        "subnetWSM2": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "The subnet ID (e.g. subnet-abcd0123) of a existing subnet where the WSM #2 instance will be created.  This subnet must be a public subnet.",
+            "AllowedPattern": "subnet-[a-f0-9]{8}",
+            "ConstraintDescription": "subnetWSM2: Please enter an existing subnet ID (subnet-abcd0123)"
+        },
+        "wsmInstanceType": {
+            "Type": "String",
+            "Default": "m3.medium",
+            "Description": "AWS instance type for WSM appliances",
+            "AllowedValues": ["m3.medium", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge"]
+        },
+        "proxyProtocol": {
+            "Type": "String",
+            "Default": "disable",
+            "Description": "Enable/disable ELB Proxy Protocol support (must also be enabled on WSM)",
+            "AllowedValues": ["enable", "disable"]
+        },
+        "alertLogicDataCenter": {
+            "Type": "String",
+            "Default": "US-Denver",
+            "Description": "AlertLogic Data Center to use as backend (US-Denver/US-Ashburn/UK)",
+            "AllowedValues": ["US-Denver", "US-Ashburn", "UK"],
+            "ConstraintDescription": "Please enter either US-Denver, US-Ashburn, or UK"
+        }
+    },
+    "Mappings": {
+        "mapRegionWsmAmi": {
+			"ap-south-1": {
+				"64": "ami-3b780f54"
+			 },
+			"eu-west-1": {
+				"64": "ami-4f85dc3c"
+			},
+			"ap-northeast-2": {
+				"64": "ami-9a17c0f4"
+			},
+			"ap-northeast-1": {
+				"64": "ami-db4fffba"
+			},
+			"sa-east-1": {
+				"64": "ami-c021bfac"
+			},
+			"ap-southeast-1": {
+				"64": "ami-6443ee07"
+			},
+			"ap-southeast-2": {
+				"64": "ami-2af8c149"
+			},
+			"eu-central-1": {
+				"64": "ami-2826e147"
+			},
+			"us-east-1": {
+				"64": "ami-25122a32"
+			},
+			"us-east-2": {
+				"64": "ami-d18dd7b4"
+			},
+			"us-west-1": {
+				"64": "ami-293d6a49"
+			},
+			"us-west-2": {
+				"64": "ami-cbb41dab"
+			}
+        },
+        "mapAlertLogicDataCenters": {
+            "US-Denver": {
+                "accessRange1": "204.110.218.96/27",
+                "accessRange2": "204.110.219.96/27",
+                "accessRange3": "216.52.175.192/26"
+            },
+            "US-Ashburn": {
+                "accessRange1": "208.71.209.32/27",
+                "accessRange2": "208.71.209.32/27",
+                "accessRange3": "208.71.209.32/27"
+            },
+            "UK": {
+                "accessRange1": "185.54.124.0/24",
+                "accessRange2": "185.54.124.0/24",
+                "accessRange3": "185.54.124.0/24"
+            }
+        },
+        "mapEBSVolumeSize": {
+            "m3.medium": {
+                "EBS": "100"
+            },
+            "c3.large": {
+                "EBS": "100"
+            },
+            "c3.xlarge": {
+                "EBS": "200"
+            },
+            "c3.2xlarge": {
+                "EBS": "200"
+            },
+            "c3.4xlarge": {
+                "EBS": "200"
+            },
+            "c4.large": {
+                "EBS": "100"
+            },
+            "c4.xlarge": {
+                "EBS": "200"
+            },
+            "c4.2xlarge": {
+                "EBS": "200"
+            },
+            "c4.4xlarge": {
+                "EBS": "200"
+            }
+        }
+    },
+	"Conditions" : {
+		"proxyProtocolEnable" : {"Fn::Equals" : [{"Ref" : "proxyProtocol"}, "enable"]}
+	},    
+	"Resources": {
+        "sgWSMELB": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security group for WSM ELB",
+                "VpcId": {
+                    "Ref": "vpc"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "sgWSMELBEgress80": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": { "Ref": "sgWSMELB" },
+                "IpProtocol": "tcp",
+                "FromPort": "80",
+                "ToPort": "80",
+                "SourceSecurityGroupId": { "Ref": "sgWSM" }
+	        }
+        },
+        "sgWSMELBEgress443": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": { "Ref": "sgWSMELB" },
+                "IpProtocol": "tcp",
+                "FromPort": "443",
+                "ToPort": "443",
+                "SourceSecurityGroupId": { "Ref": "sgWSM" }
+	        }
+        },
+        "sgWSM": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security group for WSM",
+                "VpcId": {
+                    "Ref": "vpc"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId": { "Ref": "sgWSMELB" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId": { "Ref": "sgWSMELB" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": { "Fn::FindInMap": ["mapAlertLogicDataCenters", { "Ref": "alertLogicDataCenter" }, "accessRange1"] }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": { "Fn::FindInMap": ["mapAlertLogicDataCenters", { "Ref": "alertLogicDataCenter" }, "accessRange2"] }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4849",
+                        "ToPort": "4849",
+                        "CidrIp": { "Fn::FindInMap": ["mapAlertLogicDataCenters", { "Ref": "alertLogicDataCenter" }, "accessRange1"] }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4849",
+                        "ToPort": "4849",
+                        "CidrIp": { "Fn::FindInMap": ["mapAlertLogicDataCenters", { "Ref": "alertLogicDataCenter" }, "accessRange2"] }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4849",
+                        "ToPort": "4849",
+                        "CidrIp": { "Fn::FindInMap": ["mapAlertLogicDataCenters", { "Ref": "alertLogicDataCenter" }, "accessRange3"] }
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "udp",
+                        "FromPort": "123",
+                        "ToPort": "123",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "udp",
+                        "FromPort": "53",
+                        "ToPort": "53",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "sgWSMIngress2000": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": { "Ref": "sgWSM" },
+                "IpProtocol": "tcp",
+                "FromPort": "2000",
+                "ToPort": "2000",
+                "SourceSecurityGroupId": { "Ref": "sgWSM" }
+	        }
+        },
+        "sgWSMIngress5556": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": { "Ref": "sgWSM" },
+                "IpProtocol": "tcp",
+                "FromPort": "5556",
+                "ToPort": "5556",
+                "SourceSecurityGroupId": { "Ref": "sgWSM" }
+	        }
+        },
+        "sgWSMEgress2000": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": { "Ref": "sgWSM" },
+                "IpProtocol": "tcp",
+                "FromPort": "2000",
+                "ToPort": "2000",
+                "SourceSecurityGroupId": { "Ref": "sgWSM" }
+	        }
+        },
+        "sgWSMEgress5556": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": { "Ref": "sgWSM" },
+                "IpProtocol": "tcp",
+                "FromPort": "5556",
+                "ToPort": "5556",
+                "SourceSecurityGroupId": { "Ref": "sgWSM" }
+	        }
+        },
+        "elbWSM": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "CrossZone" : "True",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "30",
+                    "Target": "TCP:80",
+                    "Timeout": "5",
+                    "UnhealthyThreshold": "5"
+                },
+                "Instances": [
+					{ 
+					    "Ref": "wsmPrimary" 
+					},
+					{ 
+					    "Ref": "wsmWSM2" 
+					}
+				],
+                "Listeners": [
+					{
+						"InstancePort": "80",
+						"LoadBalancerPort": "80",
+						"Protocol": "HTTP",
+						"PolicyNames": []
+					},
+					{
+						"Fn::If": [
+							"proxyProtocolEnable",
+							{
+									"InstancePort": "443",
+									"LoadBalancerPort": "443",
+									"Protocol": "TCP",
+									"PolicyNames": []
+							},
+							{"Ref" : "AWS::NoValue"}
+						]
+					}
+                ],
+  				"Policies": [
+                    {
+						"Fn::If": [
+							"proxyProtocolEnable",
+							{
+								"InstancePorts": [ "80", "443" ],
+								"PolicyName": "EnableProxyProtocolPolicy",
+								"PolicyType": "ProxyProtocolPolicyType",
+								"Attributes": [
+									{ 
+										"Name": "ProxyProtocol", 
+										"Value": true 
+									}
+								]
+							},
+							{"Ref" : "AWS::NoValue"}
+						]
+                    }
+                ],
+				"Subnets": [ 
+					{ 
+					    "Ref": "subnetPrimary"
+					},
+					{ 
+					    "Ref": "subnetWSM2"
+					}
+				],
+                "SecurityGroups": [
+                    {
+                        "Ref": "sgWSMELB"
+                    }
+                ],
+                "Tags": [
+                    {
+                      "Key": "Name",
+                      "Value": { "Fn::Join": [ "", [ { "Ref": "AWS::StackName" }, "-elb" ] ] }
+                    }
+                ]
+            }
+        },
+        "wsmPrimary" : {
+             "Type" : "AWS::EC2::Instance",
+             "Properties" : {
+                "ImageId": {
+                    "Fn::FindInMap" : [ "mapRegionWsmAmi", { "Ref" : "AWS::Region" }, "64"]
+                },
+                "InstanceType": {
+                    "Ref": "wsmInstanceType"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "sgWSM"
+                    }
+                ],
+                "SubnetId": {
+                    "Ref": "subnetPrimary"
+                },
+				"BlockDeviceMappings" : [
+                    {
+                        "DeviceName" : "/dev/sda1",
+                        "Ebs" : { 
+						    "VolumeSize" : { 
+							    "Fn::FindInMap" : [ "mapEBSVolumeSize", { "Ref" : "wsmInstanceType" }, "EBS"]
+						    },
+							"VolumeType": "gp2"
+						}
+					}
+                ],
+                "Tags": [
+                    {
+                      "Key": "Name",
+                      "Value": { "Fn::Join": [ "", [ { "Ref": "AWS::StackName" }, "-primary" ] ] }
+                    }
+                ]
+            }
+        },
+        "wsmWSM2" : {
+             "Type" : "AWS::EC2::Instance",
+             "Properties" : {
+                "ImageId": {
+                    "Fn::FindInMap" : [ "mapRegionWsmAmi", { "Ref" : "AWS::Region" }, "64"]
+                },
+                "InstanceType": {
+                    "Ref": "wsmInstanceType"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "sgWSM"
+                    }
+                ],
+                "SubnetId": {
+                    "Ref": "subnetWSM2"
+                },
+				"BlockDeviceMappings" : [
+                    {
+                        "DeviceName" : "/dev/sda1",
+                        "Ebs" : { 
+						    "VolumeSize" : { 
+							    "Fn::FindInMap" : [ "mapEBSVolumeSize", { "Ref" : "wsmInstanceType" }, "EBS"]
+						    },
+							"VolumeType": "gp2"
+						}
+					}
+                ],
+                "Tags": [
+                    {
+                      "Key": "Name",
+                      "Value": { "Fn::Join": [ "", [ { "Ref": "AWS::StackName" }, "-wsm2" ] ] }
+                    }
+                ]
+            }
+        },
+        "eipPrimary" : {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "InstanceId" : { "Ref": "wsmPrimary" },
+                "Domain" : "vpc"
+			}
+		},
+        "eipWSM2" : {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "InstanceId" : { "Ref": "wsmWSM2" },
+                "Domain" : "vpc"
+			}
+		}
+    },
+    "Outputs": {
+        "elbWSMDescription": {
+            "Value": {
+                "Fn::GetAtt": ["elbWSM" , "DNSName"]
+            },
+            "Description": "DNS Name of the WSM ELB"
+        },
+        "wsmPrimaryDescription": {
+            "Value": {
+                "Ref" : "eipPrimary"
+            },
+            "Description": "EIP of primary WSM"
+        },
+        "wsmWSM2Description": {
+            "Value": {
+                "Ref" : "eipWSM2"
+            },
+            "Description": "EIP of WSM #2"
+        }
+    }
+}
