@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Alert Logic Log Collection Role for collecting S3 logs (for additional s3
+  buckts, modify the created IAM policy with resource ARN of s3 bucket to
+  collect the logs from). Creates and implements IAM role and policy.
+Parameters:
+  ExternalId:
+    AllowedPattern: '[\w+=,.@:\/-]*'
+    MaxLength: 1224
+    Description: >-
+      A unique identifier that is used by AlertLogic when assuming roles in the
+      account. This is entered into the Alert Logic Portal later on. More
+      information can be found on the following page in AWS's IAM Documentation:
+      http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html
+    ConstraintDescription: >-
+      The format for this parameter must be a string of characters consisting of
+      2-1224 upper and lower case alphanumeric characters with no spaces. You
+      can also include underscores or any of the following characters: =,.@:\/-
+    MinLength: '2'
+    Type: String
+    NoEcho: 'true'
+  AlertLogicDatacenter:
+    AllowedValues:
+      - US
+      - EU
+    Type: String
+    Default: US
+    Description: >-
+      Please consult your Onboarding Project Manager or Onboarding Engineer if
+      unsure.
+  S3Bucket:
+    Description: Name of an existing S3 bucket to collect logs from using Log Manager.
+    Type: String
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: Create Alert Logic IAM Role and Policy
+        Parameters:
+          - ExternalId
+          - AlertLogicDatacenter
+          - S3Bucket
+    ParameterLabels:
+      ExternalId:
+        default: 'External ID:'
+      AlertLogicDatacenter:
+        default: 'Alert Logic DC where your Account is Deployed in:'
+      S3Bucket:
+        default: 'S3 bucket name:'
+Mappings:
+  AlertLogic:
+    Datacenter:
+      US: 'arn:aws:iam::239734009475:root'
+      EU: 'arn:aws:iam::239734009475:root'
+Resources:
+  AlertLogicPolicy:
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: S3AuditLoggingAndLogCollection1
+            Effect: Allow
+            Action:
+              - 's3:GetObject'
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - /*
+          - Sid: S3AuditLoggingAndLogCollection2
+            Action:
+              - 's3:ListBucket'
+            Effect: Allow
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+      Roles:
+        - !Ref AlertLogicRole
+      PolicyName: alertlogic-s3-log-collection-policy
+    Type: 'AWS::IAM::Policy'
+  AlertLogicRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: /
+      RoleName: alertlogic-s3-log-collection-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !FindInMap 
+                - AlertLogic
+                - Datacenter
+                - !Ref AlertLogicDatacenter
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref ExternalId
+Outputs:
+  ExternalId:
+    Description: External ID used by Alert Logic to assume your new Cross-Account IAM role.
+    Value: !Ref ExternalId
+  RoleARN:
+    Description: Amazon Resource Name of your new Cross-Account IAM Role.
+    Value: !GetAtt 
+      - AlertLogicRole
+      - Arn
