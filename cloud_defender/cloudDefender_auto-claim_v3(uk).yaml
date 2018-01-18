@@ -134,3 +134,7 @@ Outputs:
     Description: >-
       Copy this Security Group ID into the destination fields of the new egress
       rules for the Agents' Security Groups.
+  EIP:
+    Value: !Ref tmcEIP
+    Description: >-
+      Appliance Elastic IP.
