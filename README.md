@@ -13,15 +13,16 @@ This group of CloudFormation templates have been designed to allow Alert Logic u
 │   ├── cloudinsight-cross-account-iam-role(centralized_cloudtrail_account).yaml
 │   ├── cloudinsight-cross-account-iam-role(protected_account).yaml
 │   └── cloudinsight-essentials-cross-account-iam-role(protected_account).yaml
+├── LICENSE
 ├── log_manager
 │   ├── clw-to-s3-child-nested.yaml
 │   ├── clw-to-s3-master.yaml
 │   ├── logmanager-cloudtrail-collection-setup_v1.1.yaml
 │   └── logmanager-s3-collection-setup_v1.1.yaml
-├── threat_manager
-│   ├── tmc_auto-claim_v3(uk).yaml
-│   ├── tmc_auto-claim_v3(us).yaml
-│   └── tmc_us-gov_v3.yaml
-.
+├── README.md
+└── threat_manager
+    ├── tmc_auto-claim_v3(uk).yaml
+    ├── tmc_auto-claim_v3(us).yaml
+    └── tmc_us-gov_v3.yaml
 
-5 directories, 17 files
+4 directories, 16 files
