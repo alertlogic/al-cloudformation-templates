@@ -17,7 +17,7 @@ This group of CloudFormation templates have been designed to allow Alert Logic u
 ├── log_manager
 │   ├── clw-to-s3-child-nested.yaml
 │   ├── clw-to-s3-master.yaml
-│   ├── logmanager-cloudtrail-collection-setup_v1.1.yaml
+│   ├── logmanager-cloudtrail-collection-setup_v1.2.yaml
 │   └── logmanager-s3-collection-setup_v1.1.yaml
 └── threat_manager
     ├── tmc_auto-claim_v3(uk).yaml
