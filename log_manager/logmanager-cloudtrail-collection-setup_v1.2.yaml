@@ -216,6 +216,35 @@ Resources:
         - ''
         - - alertlogic-cloudtrail-
           - !Ref 'AWS::AccountId'
+  CloudTrailBucketPolicy:
+      Type: "AWS::S3::BucketPolicy"
+      Properties:
+        Bucket:
+          Ref: CloudTrailBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            -
+              Sid: "AWSCloudTrailAclCheck"
+              Effect: "Allow"
+              Principal:
+                Service: "cloudtrail.amazonaws.com"
+              Action: "s3:GetBucketAcl"
+              Resource:
+                !Sub |-
+                  arn:aws:s3:::${CloudTrailBucket}
+            -
+              Sid: "AWSCloudTrailWrite"
+              Effect: "Allow"
+              Principal:
+                Service: "cloudtrail.amazonaws.com"
+              Action: "s3:PutObject"
+              Resource:
+                !Sub |-
+                  arn:aws:s3:::${CloudTrailBucket}/AWSLogs/${AWS::AccountId}/*
+              Condition:
+                StringEquals:
+                  s3:x-amz-acl: "bucket-owner-full-control"
   EnableCloudTrail:
     Type: 'AWS::CloudTrail::Trail'
     Condition: CreateCloudTrail
@@ -232,6 +261,7 @@ Resources:
           Value: alertlogic-cloudtrail
     DependsOn:
       - CloudTrailTopicPolicy
+      - CloudTrailBucketPolicy
   AlertLogicRole:
     Type: 'AWS::IAM::Role'
     Properties:
