@@ -25,11 +25,20 @@ Parameters:
     MaxLength: 1224
     Type: String
     NoEcho: 'true'
+  KMSKey:
+    Description: ARN of the KMS key used to encrypt the CloudTrail
+    Type: String
+    Default: ''    
 Mappings:
   AlertLogic:
     Datacenter:
       US: 'arn:aws:iam::733251395267:root'
       EU: 'arn:aws:iam::857795874556:root'
+Conditions:
+  NoKMS: !Equals
+    - ''
+    - !Ref KMSKey
+
 Resources:
   AlertLogicRole:
     Properties:
@@ -85,6 +94,10 @@ Resources:
                   - 's3:GetBucketLocation'
                   - 's3:GetObject'
                 Resource: '*'
+              - Sid: AllowDecryptOfCloudTrailKey
+                Effect: !If [NoKMS, 'Deny', 'Allow']
+                Action: kms:Decrypt
+                Resource: !If [NoKMS, 'arn:aws:kms:*:*:*', !Ref KMSKey]                
               - Sid: CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails
                 Effect: Allow
                 Action:
