@@ -28,7 +28,7 @@ Parameters:
   KMSKey:
     Description: ARN of the KMS key used to encrypt the CloudTrail
     Type: String
-    Default: ''    
+    Default: ''
 Mappings:
   AlertLogic:
     Datacenter:
@@ -51,7 +51,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !FindInMap 
+                - !FindInMap
                   - AlertLogic
                   - Datacenter
                   - !Ref AlertLogicDatacenter
@@ -95,9 +95,9 @@ Resources:
                   - 's3:GetObject'
                 Resource: '*'
               - Sid: AllowDecryptOfCloudTrailKey
-                Effect: !If [NoKMS, 'Deny', 'Allow']
+                Effect: Allow
                 Action: kms:Decrypt
-                Resource: !If [NoKMS, 'arn:aws:kms:*:*:*', !Ref KMSKey]                
+                Resource: !If [NoKMS, 'arn:aws:kms:*:*:key/nonexistent-key', !Ref KMSKey]
               - Sid: CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails
                 Effect: Allow
                 Action:
@@ -126,6 +126,6 @@ Outputs:
     Value: !Ref ExternalID
   RoleARN:
     Description: Amazon Resource Name of your new Cross-Account IAM Role.
-    Value: !GetAtt 
+    Value: !GetAtt
       - AlertLogicRole
       - Arn
