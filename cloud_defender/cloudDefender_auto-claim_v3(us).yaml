@@ -18,44 +18,46 @@ Parameters:
   instanceType:
     Type: String
     Description: EC2 Instance Type Cloud Defender will be spun up as.
-    Default: c4.xlarge
+    Default: c5.xlarge
     AllowedValues:
-      - c3.large
-      - c3.xlarge
-      - c3.2xlarge
       - c4.large
       - c4.xlarge
       - c4.2xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
 Mappings:
   threatManagerAMI:
     ap-south-1:
-      AMI: ami-f6ccb499
+      AMI: ami-944916fb
+    eu-west-3:
+      AMI: ami-2d66d050
     eu-west-2:
-      AMI: ami-321d0c56
+      AMI: ami-c66480a1
     eu-west-1:
-      AMI: ami-b6c52ecf
+      AMI: ami-c57336bc
     ap-northeast-2:
-      AMI: ami-26a17848
+      AMI: ami-e768c589
     ap-northeast-1:
-      AMI: ami-dd17f5bb
+      AMI: ami-f07e3896
     sa-east-1:
-      AMI: ami-a9b8cfc5
+      AMI: ami-72115a1e
     ca-central-1:
-      AMI: ami-9e0db2fa
+      AMI: ami-6d880f09
     ap-southeast-1:
-      AMI: ami-a4d24fc7
+      AMI: ami-1c1e5560
     ap-southeast-2:
-      AMI: ami-9dbda2fe
+      AMI: ami-3edd1b5c
     eu-central-1:
-      AMI: ami-909438ff
+      AMI: ami-aa92ffc5
     us-east-1:
-      AMI: ami-c2a8f7b9
+      AMI: ami-5934df24
     us-east-2:
-      AMI: ami-322f0f57
+      AMI: ami-e5fdca80
     us-west-1:
-      AMI: ami-8b765eeb
+      AMI: ami-87e6ede7
     us-west-2:
-      AMI: ami-cb9f85b2
+      AMI: ami-5b9e1623
     us-gov-west-1:
       AMI: ami-89df5ce8
 Resources:
@@ -132,7 +134,7 @@ Resources:
   instanceTmAppliance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: !FindInMap 
+      ImageId: !FindInMap
         - threatManagerAMI
         - !Ref 'AWS::Region'
         - AMI
