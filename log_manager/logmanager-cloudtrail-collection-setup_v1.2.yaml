@@ -40,6 +40,12 @@ Parameters:
       ARN of an existing CloudTrail topic to subscribe SQS to. Create the stack
       in the region where the SNS Topic exists.
     Type: String
+  QueueName:
+    Description: >-
+      Name of the SQS Queue to create. CloudTrail's SNS Topic will Send Messages
+      to this Queue and LogManager will Receive Messages from it. .
+    Type: String
+    Default: alertlogic-cloudtrail-sqs-queue
   KMSKey:
     Description: ARN of the KMS key used to encrypt the CloudTrail
     Type: String
@@ -143,7 +149,7 @@ Resources:
   CloudTrailSQSQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
-      QueueName: alertlogic-cloudtrail-sqs-queue
+      QueueName: !Ref QueueName
   CloudTrailSQSQueuePolicy:
     Type: 'AWS::SQS::QueuePolicy'
     DependsOn:
