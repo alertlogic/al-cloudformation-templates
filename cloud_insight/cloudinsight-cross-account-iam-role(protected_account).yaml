@@ -23,11 +23,21 @@ Parameters:
     MaxLength: 1224
     Type: String
     NoEcho: 'true'
+  KMSKey:
+    Description: >-
+      ARN of the KMS key used to encrypt the CloudTrail. If you use centralized CloudTrail,
+      enter the KMS key on the centralized role CFT instead of in this CFT.
+    Type: String
+    Default: ''
 Mappings:
   AlertLogic:
     Datacenter:
       US: 'arn:aws:iam::733251395267:root'
       EU: 'arn:aws:iam::857795874556:root'
+Conditions:
+  NoKMS: !Equals
+    - ''
+    - !Ref KMSKey
 Resources:
   AlertLogicRole:
     Properties:
@@ -40,7 +50,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !FindInMap 
+                - !FindInMap
                   - AlertLogic
                   - Datacenter
                   - !Ref AlertLogicDatacenter
@@ -228,6 +238,10 @@ Resources:
                   - 'autoscaling:CreateAutoScalingGroup'
                   - 'autoscaling:DeleteAutoScalingGroup'
                 Resource: '*'
+              - Sid: AllowDecryptOfCloudTrailKey
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: !If [NoKMS, 'arn:aws:kms:*:*:key/nonexistent_key', !Ref KMSKey]
             Version: 2012-10-17
           PolicyName: alertlogic-cloudinsight-iam-policy
     Type: 'AWS::IAM::Role'
@@ -237,6 +251,6 @@ Outputs:
     Value: !Ref ExternalID
   RoleARN:
     Description: Amazon Resource Name of your new Cross-Account IAM Role.
-    Value: !GetAtt 
+    Value: !GetAtt
       - AlertLogicRole
       - Arn
