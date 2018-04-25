@@ -42,7 +42,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !FindInMap 
+                - !FindInMap
                   - AlertLogic
                   - Datacenter
                   - !Ref AlertLogicDatacenter
@@ -61,7 +61,16 @@ Resources:
                   - 'cloudformation:ListStack*'
                   - 'cloudfront:Get*'
                   - 'cloudfront:List*'
+                  - 'cloudtrail:DescribeTrails'
+                  - 'cloudtrail:GetTrailStatus'
+                  - 'cloudtrail:ListTags'
+                  - 'cloudtrail:LookupEvents'
                   - 'cloudwatch:Describe*'
+                  - 'config:DeliverConfigSnapshot'
+                  - 'config:Describe*'
+                  - 'config:Get*'
+                  - 'config:ListDiscoveredResources'
+                  - 'cur:DescribeReportDefinitions'
                   - 'directconnect:Describe*'
                   - 'dynamodb:ListTables'
                   - 'ec2:Describe*'
@@ -72,11 +81,18 @@ Resources:
                   - 'events:Describe*'
                   - 'events:List*'
                   - 'glacier:ListVaults'
-                  - 'guardduty:Describe*'
                   - 'guardduty:Get*'
                   - 'guardduty:List*'
                   - 'kinesis:Describe*'
                   - 'kinesis:List*'
+                  - 'kms:DescribeKey'
+                  - 'kms:GetKeyPolicy'
+                  - 'kms:GetKeyRotationStatus'
+                  - 'kms:ListAliases'
+                  - 'kms:ListGrants'
+                  - 'kms:ListKeys'
+                  - 'kms:ListKeyPolicies'
+                  - 'kms:ListResourceTags'
                   - 'lambda:List*'
                   - 'logs:Describe*'
                   - 'rds:Describe*'
@@ -88,6 +104,12 @@ Resources:
                   - 'route53:ListResourceRecordSets'
                   - 'sdb:DomainMetadata'
                   - 'sdb:ListDomains'
+                  - 'sns:ListSubscriptions'
+                  - 'sns:ListSubscriptionsByTopic'
+                  - 'sns:ListTopics'
+                  - 'sns:GetEndpointAttributes'
+                  - 'sns:GetSubscriptionAttributes'
+                  - 'sns:GetTopicAttributes'
                   - 's3:ListAllMyBuckets'
                   - 's3:ListBucket'
                   - 's3:GetBucketLocation'
@@ -96,6 +118,8 @@ Resources:
                   - 's3:GetLifecycleConfiguration'
                   - 's3:GetObjectAcl'
                   - 's3:GetObjectVersionAcl'
+                  - 'tag:GetResources'
+                  - 'tag:GetTagKeys'
                 Resource: '*'
               - Sid: EnableInsightDiscovery
                 Effect: Allow
@@ -157,6 +181,6 @@ Outputs:
     Value: !Ref ExternalID
   RoleARN:
     Description: Amazon Resource Name of your new Cross-Account IAM Role.
-    Value: !GetAtt 
+    Value: !GetAtt
       - AlertLogicRole
       - Arn
