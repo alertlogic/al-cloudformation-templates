@@ -86,7 +86,7 @@ Mappings:
   AlertLogic:
     Datacenter:
       US: 'arn:aws:iam::239734009475:root'
-      EU: 'arn:aws:iam::239734009475:root'
+      EU: 'arn:aws:iam::857795874556:root'
 Resources:
   AlertLogicPolicy:
     Properties:
