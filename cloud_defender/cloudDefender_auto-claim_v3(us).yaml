@@ -146,6 +146,12 @@ Resources:
           DeviceIndex: '0'
           DeleteOnTermination: 'true'
           SubnetId: !Ref publicSubnet
+      BlockDeviceMappings:
+        - DeviceName: '/dev/sda1'
+          Ebs:
+            VolumeType: 'gp2'
+            VolumeSize: 100
+            DeleteOnTermination: true
       Tags:
         - Key: Name
           Value: Alert Logic Cloud Defender
