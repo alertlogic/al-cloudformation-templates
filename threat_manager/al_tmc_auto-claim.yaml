@@ -181,11 +181,11 @@ Resources:
       InstanceType: !Ref instanceType
       SubnetId: !Ref subnetId
       SecurityGroupIds:
-        - !Ref sgThreatManager
-        - !If
+        !If
           - AddWebAppIDSRules
-          - !Ref sgWebAppIDS
-          - !Ref sgThreatManager
+          - - !Ref sgWebAppIDS
+            - !Ref sgThreatManager
+          - - !Ref sgThreatManager
       Tags:
         - Key: Name
           Value: Alert Logic Threat Manager
