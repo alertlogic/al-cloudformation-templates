@@ -179,20 +179,13 @@ Resources:
         - !Ref 'AWS::Region'
         - AMI
       InstanceType: !Ref instanceType
-      NetworkInterfaces:
-        - GroupSet:
+      SubnetId: !Ref subnetId
+      SecurityGroupIds:
+        !If
+          - AddWebAppIDSRules
+          - - !Ref sgWebAppIDS
             - !Ref sgThreatManager
-            - !If
-              - AddWebAppIDSRules
-              - !Ref sgWebAppIDS
-              - !Ref sgThreatManager
-          AssociatePublicIpAddress: !If
-            - AttachEIP
-            - 'true'
-            - 'false'
-          DeviceIndex: '0'
-          DeleteOnTermination: 'true'
-          SubnetId: !Ref subnetId
+          - - !Ref sgThreatManager
       Tags:
         - Key: Name
           Value: Alert Logic Threat Manager
@@ -216,3 +209,8 @@ Outputs:
     Description: >-
       Add this Security Group ID into the destination fields of the egress
       rules for the Agents' Security Groups.
+  appliancePublicIP:
+    Value: !Ref tmcEIP
+    Description: >-
+      Monitor appliance claim status from http://[appliancePublicIP].
+    Condition: AttachEIP
