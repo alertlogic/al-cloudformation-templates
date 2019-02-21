@@ -16,9 +16,9 @@ Parameters:
       The format for this parameter must be a string of characters consisting of
       2-1224 upper and lower case alphanumeric characters with no spaces. You
       can also include underscores or any of the following characters: =,.@:\/-
-    MinLength: '2'
+    MinLength: "2"
     Type: String
-    NoEcho: 'true'
+    NoEcho: "true"
   AlertLogicDatacenter:
     AllowedValues:
       - US
@@ -31,8 +31,16 @@ Parameters:
   S3Bucket:
     Description: Name of an existing S3 bucket to collect logs from using Log Manager.
     Type: String
+  KMSKey:
+    Description: ARN of the KMS key used to encrypt the S3 logs (Optional)
+    Type: String
+    Default: ""
+Conditions:
+  NoKMS: !Equals
+    - ""
+    - !Ref KMSKey
 Metadata:
-  'AWS::CloudFormation::Interface':
+  "AWS::CloudFormation::Interface":
     ParameterGroups:
       - Label:
           default: Create Alert Logic IAM Role and Policy
@@ -42,16 +50,16 @@ Metadata:
           - S3Bucket
     ParameterLabels:
       ExternalId:
-        default: 'External ID:'
+        default: "External ID:"
       AlertLogicDatacenter:
-        default: 'Alert Logic DC where your Account is Deployed in:'
+        default: "Alert Logic DC where your Account is Deployed in:"
       S3Bucket:
-        default: 'S3 bucket name:'
+        default: "S3 bucket name:"
 Mappings:
   AlertLogic:
     Datacenter:
-      US: 'arn:aws:iam::239734009475:root'
-      EU: 'arn:aws:iam::239734009475:root'
+      US: "arn:aws:iam::239734009475:root"
+      EU: "arn:aws:iam::239734009475:root"
 Resources:
   AlertLogicPolicy:
     Properties:
@@ -61,26 +69,30 @@ Resources:
           - Sid: S3AuditLoggingAndLogCollection1
             Effect: Allow
             Action:
-              - 's3:GetObject'
-            Resource: !Join 
-              - ''
-              - - 'arn:aws:s3:::'
+              - "s3:GetObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
                 - !Ref S3Bucket
                 - /*
           - Sid: S3AuditLoggingAndLogCollection2
             Action:
-              - 's3:ListBucket'
+              - "s3:ListBucket"
             Effect: Allow
-            Resource: !Join 
-              - ''
-              - - 'arn:aws:s3:::'
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
                 - !Ref S3Bucket
+          - Sid: AllowDecryptOfS3KMSKey
+            Effect: !If [NoKMS, "Deny", "Allow"]
+            Action: kms:Decrypt
+            Resource: !If [NoKMS, "arn:aws:kms:*:*:*", !Ref KMSKey]
       Roles:
         - !Ref AlertLogicRole
       PolicyName: alertlogic-s3-log-collection-policy
-    Type: 'AWS::IAM::Policy'
+    Type: "AWS::IAM::Policy"
   AlertLogicRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
       Path: /
       RoleName: alertlogic-s3-log-collection-role
@@ -89,20 +101,20 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !FindInMap 
+              AWS: !FindInMap
                 - AlertLogic
                 - Datacenter
                 - !Ref AlertLogicDatacenter
-            Action: 'sts:AssumeRole'
+            Action: "sts:AssumeRole"
             Condition:
               StringEquals:
-                'sts:ExternalId': !Ref ExternalId
+                "sts:ExternalId": !Ref ExternalId
 Outputs:
   ExternalId:
     Description: External ID used by Alert Logic to assume your new Cross-Account IAM role.
     Value: !Ref ExternalId
   RoleARN:
     Description: Amazon Resource Name of your new Cross-Account IAM Role.
-    Value: !GetAtt 
+    Value: !GetAtt
       - AlertLogicRole
       - Arn
