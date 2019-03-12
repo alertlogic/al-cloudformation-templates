@@ -33,54 +33,56 @@ Parameters:
       Add a name of the folder to place logs into. If you leave this parameter
       empty, the name of the stack will be used.
     Type: String
-  LambdaS3BucketNamePrefix:
+  LambdaS3BucketName:
     Description: >-
       The S3 bucket which contains Lambda package to be used for archiving
       CloudWath Logs to S3
     Type: String
-    Default: alertlogic-public-repo
-    MinLength: '5'
+    Default: al-deployment-services
+    MinLength: "5"
   LambdaPackageName:
     Description: >-
       Object name containing Lambda package to be used for archiving CloudWath
       Logs to S3.
     Type: String
     Default: cloudwatch-logs-s3-export-0.0.11.zip
-    MinLength: '5'
+    MinLength: "5"
   AlertLogicAWSAccountId:
     Description: >-
       Alert Logic's AWS Account ID used for collecting data. A third-party role
       will be created to give read-only access to the 'S3BucketName'. Don't
       change this value
     Type: String
-    Default: '239734009475'
+    Default: "239734009475"
   AlertLogicPublicApiKey:
     Description: >-
       Public Api key issued to you by Alert Logic. Leave this field if you like
       to setup the log source manually in the UI.
     Type: String
-    Default: ''
-    NoEcho: 'true'
+    Default: ""
+    NoEcho: "true"
   AlertLogicAccountId:
     Description: >-
       Your Alert Logic's Account ID. Leave this field if you like to setup the
       log source manually in the UI. Use child Account ID if you want to send to
       a child account.
     Type: String
-    Default: ''
+    Default: ""
   TemplateURL:
     Type: String
     Description: >-
       The S3 bucket object URL that store the Cloud Formation child nested
       template (clw-to-s3-child-nested.template)
-    Default: >-
-      https://s3.amazonaws.com/mmohamed-tools/templates/clw-to-s3-child-nested.template
+    Default: https://s3.amazonaws.com/al-deployment-services.us-east-1/cloud_formations/clw-to-s3-child-nested.yaml
 Conditions:
-  EmptyPrefix: !Equals 
+  EmptyPrefix: !Equals
     - !Ref S3LogFolderName
-    - ''
+    - ""
+  CreateALSource: !Equals
+    - ""
+    - !Ref AlertLogicPublicApiKey
 Metadata:
-  'AWS::CloudFormation::Interface':
+  "AWS::CloudFormation::Interface":
     ParameterGroups:
       - Label:
           default: Alert Logic Log Manager Configuration (Optional)
@@ -99,59 +101,59 @@ Metadata:
       - Label:
           default: Lambda Configuration
         Parameters:
-          - LambdaS3BucketNamePrefix
+          - LambdaS3BucketName
           - LambdaPackageName
           - KinesisStreamArn
     ParameterLabels:
       AlertLogicAccountId:
-        default: 'Your Alert Logic account id:'
+        default: "Your Alert Logic account id:"
       AlertLogicAWSAccountId:
-        default: 'Alert Logic AWS account id to grant access to your data:'
+        default: "Alert Logic AWS account id to grant access to your data:"
       AlertLogicPublicApiKey:
-        default: 'Alert Logic API key:'
-      LambdaS3BucketNamePrefix:
-        default: 'Lambda package S3 bucket prefix:'
+        default: "Alert Logic API key:"
+      LambdaS3BucketName:
+        default: "Lambda package S3 bucket prefix:"
       LambdaPackageName:
-        default: 'Lambda package name:'
+        default: "Lambda package name:"
       CloudWatchLogGroup:
-        default: 'CloudWatch log group name:'
+        default: "CloudWatch log group name:"
       LogFormat:
-        default: 'Log Format:'
+        default: "Log Format:"
       S3BucketName:
-        default: 'S3 bucket name:'
+        default: "S3 bucket name:"
       S3LogFolderName:
-        default: 'Logs folder name:'
+        default: "Logs folder name:"
       SubscriptionFilterPattern:
-        default: 'CloudWatch subscription filter:'
+        default: "CloudWatch subscription filter:"
       KinesisStreamArn:
-        default: 'ARN of an active stream:'
+        default: "ARN of an active stream:"
 Resources:
   AlertLogicS3AccessRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Join 
-                - ''
-                - - 'arn:aws:iam::'
+              AWS: !Join
+                - ""
+                - - "arn:aws:iam::"
                   - !Ref AlertLogicAWSAccountId
-                  - ':root'
-            Action: 'sts:AssumeRole'
+                  - ":root"
+            Action: "sts:AssumeRole"
             Condition:
               StringEquals:
-                'sts:ExternalId': !Ref 'AWS::AccountId'
+                "sts:ExternalId": !Ref "AWS::AccountId"
   AlertLogicS3AccessPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: !Join 
-        - ''
-        - - !Ref 'AWS::AccountId'
-          - '-'
-          - !Ref 'AWS::Region'
-          - '-AlertLogicS3AccessPolicy'
+      PolicyName: !Join
+        - ""
+        - - !Ref "AWS::AccountId"
+          - "-"
+          - !Ref "AWS::Region"
+          - "-AlertLogicS3AccessPolicy"
       Roles:
         - !Ref AlertLogicS3AccessRole
       PolicyDocument:
@@ -160,36 +162,36 @@ Resources:
           - Sid: S3AuditLoggingAndLogCollection1
             Effect: Allow
             Action:
-              - 's3:GetObject'
-            Resource: !Join 
-              - ''
-              - - 'arn:aws:s3:::'
+              - "s3:GetObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
                 - !Ref S3BucketName
                 - /*
           - Sid: S3AuditLoggingAndLogCollection2
             Action:
-              - 's3:ListBucket'
+              - "s3:ListBucket"
             Effect: Allow
-            Resource: !Join 
-              - ''
-              - - 'arn:aws:s3:::'
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
                 - !Ref S3BucketName
   CloudWatchLogsKinesisRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
           - Effect: Allow
             Principal:
-              Service: !Join 
-                - ''
+              Service: !Join
+                - ""
                 - - logs.
-                  - !Ref 'AWS::Region'
+                  - !Ref "AWS::Region"
                   - .amazonaws.com
-            Action: 'sts:AssumeRole'
+            Action: "sts:AssumeRole"
   CloudWatchLogsKinesisPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: "AWS::IAM::Policy"
     Properties:
       PolicyName: CloudWatchLogsKinesisPolicy
       Roles:
@@ -199,18 +201,18 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - 'kinesis:PutRecord'
-              - 'kinesis:PutRecords'
+              - "kinesis:PutRecord"
+              - "kinesis:PutRecords"
             Resource: !Ref KinesisStreamArn
           - Effect: Allow
-            Action: 'iam:PassRole'
-            Resource: !GetAtt 
+            Action: "iam:PassRole"
+            Resource: !GetAtt
               - CloudWatchLogsKinesisRole
               - Arn
     DependsOn:
       - CloudWatchLogsKinesisRole
   LambdaS3ExportWorkerRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -218,9 +220,9 @@ Resources:
           - Effect: Allow
             Principal:
               Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
+            Action: "sts:AssumeRole"
   LambdaS3ExportWorkerPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: "AWS::IAM::Policy"
     Properties:
       PolicyName: LambdaS3ExportWorkerPolicy
       Roles:
@@ -230,48 +232,51 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - 'logs:DescribeLogStreams'
-              - 'logs:CreateLogGroup'
-              - 'logs:CreateLogStream'
-              - 'logs:PutLogEvents'
-            Resource: 'arn:aws:logs:*:*:*'
+              - "logs:DescribeLogStreams"
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: "arn:aws:logs:*:*:*"
           - Effect: Allow
             Action:
-              - 's3:PutObject'
-            Resource: !Join 
-              - ''
-              - - 'arn:aws:s3:::'
+              - "s3:PutObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
                 - !Ref S3BucketName
                 - /*
           - Effect: Allow
             Action:
-              - 's3:GetBucketLocation'
-              - 's3:GetLifecycleConfiguration'
-              - 's3:PutLifecycleConfiguration'
-            Resource: !Join 
-              - ''
-              - - 'arn:aws:s3:::'
+              - "s3:GetBucketLocation"
+              - "s3:GetLifecycleConfiguration"
+              - "s3:PutLifecycleConfiguration"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
                 - !Ref S3BucketName
   CreateLambdaS3ExportWorkerFunction:
-    Type: 'AWS::Lambda::Function'
+    Type: "AWS::Lambda::Function"
     Properties:
       Handler: index.handler
       Description: CloudWatch Logs export to S3 function.
-      Role: !GetAtt 
+      Role: !GetAtt
         - LambdaS3ExportWorkerRole
         - Arn
       Code:
-        S3Bucket: !Join 
-          - ''
-          - - alertlogic-public-repo.
-            - !Ref 'AWS::Region'
-        S3Key: !Ref LambdaPackageName
-      Runtime: nodejs4.3
-      Timeout: '300'
+        S3Bucket: !Join
+          - "."
+          - - !Ref LambdaS3BucketName
+            - !Ref "AWS::Region"
+        S3Key: !Join
+          - "/"
+          - - lambda_packages
+            - !Ref LambdaPackageName
+      Runtime: nodejs8.10
+      Timeout: "300"
     DependsOn:
       - LambdaS3ExportWorkerPolicy
   LambdaDriverExecutionRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -279,9 +284,9 @@ Resources:
           - Effect: Allow
             Principal:
               Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
+            Action: "sts:AssumeRole"
   LambdaDriverExecutionPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: "AWS::IAM::Policy"
     Properties:
       PolicyName: LambdaDriverExecutionPolicy
       Roles:
@@ -290,61 +295,61 @@ Resources:
         Version: 2012-10-17
         Statement:
           - Effect: Allow
-            Action: 'lambda:InvokeFunction'
-            Resource: !GetAtt 
+            Action: "lambda:InvokeFunction"
+            Resource: !GetAtt
               - CreateLambdaS3ExportWorkerFunction
               - Arn
           - Effect: Allow
             Action:
-              - 'logs:DescribeLogStreams'
-              - 'logs:CreateLogGroup'
-              - 'logs:CreateLogStream'
-              - 'logs:PutLogEvents'
-            Resource: 'arn:aws:logs:*:*:*'
+              - "logs:DescribeLogStreams"
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: "arn:aws:logs:*:*:*"
           - Effect: Allow
             Action:
-              - 'kinesis:GetRecords'
-              - 'kinesis:GetShardIterator'
-              - 'kinesis:DescribeStream'
-              - 'kinesis:ListStreams'
+              - "kinesis:GetRecords"
+              - "kinesis:GetShardIterator"
+              - "kinesis:DescribeStream"
+              - "kinesis:ListStreams"
             Resource: !Ref KinesisStreamArn
     DependsOn:
       - LambdaDriverExecutionRole
   CreateLambdaDriverFunction:
-    Type: 'AWS::Lambda::Function'
+    Type: "AWS::Lambda::Function"
     Properties:
       Handler: index.handler
-      Role: !GetAtt 
+      Role: !GetAtt
         - LambdaDriverExecutionRole
         - Arn
       Description: >-
         Pre-processor wrapper function that invokes the actual CloudWatch Logs
         export function with custom attributes.
       Code:
-        ZipFile: !Join 
-          - ''
+        ZipFile: !Join
+          - ""
           - - var awsRegion = '
-            - !Ref 'AWS::Region'
+            - !Ref "AWS::Region"
             - |
               ',
-            - '    lambdaFunctionName  = '''
+            - "    lambdaFunctionName  = '"
             - !Ref CreateLambdaS3ExportWorkerFunction
             - |
               ',
-            - '    logFormat = '''
+            - "    logFormat = '"
             - !Ref LogFormat
             - |
               ',
-            - '    s3BucketName = '''
+            - "    s3BucketName = '"
             - !Ref S3BucketName
             - |
               ',
-            - '    s3LogFilePrefix = '''
-            - !Join 
-              - ''
-              - - !If 
+            - "    s3LogFilePrefix = '"
+            - !Join
+              - ""
+              - - !If
                   - EmptyPrefix
-                  - !Ref 'AWS::StackName'
+                  - !Ref "AWS::StackName"
                   - !Ref S3LogFolderName
                 - /
             - |
@@ -397,27 +402,27 @@ Resources:
                       return context.done();
             - |2
                   });
-            - '};'
-      Runtime: nodejs4.3
-      Timeout: '300'
+            - "};"
+      Runtime: nodejs8.10
+      Timeout: "300"
     DependsOn:
       - LambdaDriverExecutionPolicy
   CreateLogSourceFunction:
-    Type: 'AWS::Lambda::Function'
+    Type: "AWS::Lambda::Function"
     Properties:
       Handler: index.handler
-      Role: !GetAtt 
+      Role: !GetAtt
         - LambdaDriverExecutionRole
         - Arn
       Description: Create Alert Logic Log Source.
       Code:
-        ZipFile: !Join 
-          - ''
+        ZipFile: !Join
+          - ""
           - - var awsRegion = '
-            - !Ref 'AWS::Region'
+            - !Ref "AWS::Region"
             - |
               ',
-            - '    lambdaFunctionName  = '''
+            - "    lambdaFunctionName  = '"
             - !Ref CreateLambdaS3ExportWorkerFunction
             - |
               ',
@@ -442,7 +447,7 @@ Resources:
             - |2
                       payload = {operation: 'deleteSource', data: event.ResourceProperties.CreateSourceParams};
             - |2
-                  } else if(event.RequestType === 'Create') { 
+                  } else if(event.RequestType === 'Create') {
             - |2
                       payload = {operation: 'createSource', data: event.ResourceProperties.CreateSourceParams};
             - |2
@@ -497,83 +502,83 @@ Resources:
                       }
             - |2
                   });
-            - '};'
-      Runtime: nodejs4.3
-      Timeout: '60'
+            - "};"
+      Runtime: nodejs8.10
+      Timeout: "60"
     DependsOn:
       - CreateLambdaS3ExportWorkerFunction
       - LambdaDriverExecutionPolicy
   LogSourceInfo:
-    Type: 'Custom::LogSourceInfo'
+    Type: "Custom::LogSourceInfo"
     Properties:
-      ServiceToken: !GetAtt 
+      ServiceToken: !GetAtt
         - CreateLogSourceFunction
         - Arn
       CreateSourceParams:
         customerId: !Ref AlertLogicAccountId
-        auth: !Join 
-          - ''
+        auth: !Join
+          - ""
           - - !Ref AlertLogicPublicApiKey
-            - ':'
-        name: !Join 
-          - ''
-          - - !Ref 'AWS::StackName'
-            - '-'
-            - !Ref 'AWS::AccountId'
-            - '-'
-            - !Ref 'AWS::Region'
+            - ":"
+        name: !Join
+          - ""
+          - - !Ref "AWS::StackName"
+            - "-"
+            - !Ref "AWS::AccountId"
+            - "-"
+            - !Ref "AWS::Region"
         type: s3
         logFormat: !Ref LogFormat
         credentials:
           type: iam_role
-          arn: !GetAtt 
+          arn: !GetAtt
             - AlertLogicS3AccessRole
             - Arn
-          externalId: !Ref 'AWS::AccountId'
+          externalId: !Ref "AWS::AccountId"
         policy:
-          default: 'false'
+          default: "false"
           multiline:
-            is_multiline: 'false'
+            is_multiline: "false"
           timestamp:
-            format: ''
+            format: ""
         s3:
-          enabled: 'true'
-          bucket: !Join 
-            - ''
+          enabled: "true"
+          bucket: !Join
+            - ""
             - - !Ref S3BucketName
               - /
-              - !If 
+              - !If
                 - EmptyPrefix
-                - !Ref 'AWS::StackName'
+                - !Ref "AWS::StackName"
                 - !Ref S3LogFolderName
           file_pattern: .*
           time_zone: GMT
-          max_collection_interval: '300'
+          max_collection_interval: "300"
     DependsOn:
       - CreateLogSourceFunction
       - LambdaDriverExecutionPolicy
   StackCreateCloudWatchLogExport:
-    Type: 'AWS::CloudFormation::Stack'
+    Type: "AWS::CloudFormation::Stack"
     Properties:
       Parameters:
         KinesisStreamArn: !Ref KinesisStreamArn
         SubscriptionFilterPattern: !Ref SubscriptionFilterPattern
         CloudWatchLogGroup: !Ref CloudWatchLogGroup
-        CloudWatchLogsKinesisRoleArn: !GetAtt 
+        CloudWatchLogsKinesisRoleArn: !GetAtt
           - CloudWatchLogsKinesisRole
           - Arn
-        LambdaDriverFunctionArn: !GetAtt 
+        LambdaDriverFunctionArn: !GetAtt
           - CreateLambdaDriverFunction
           - Arn
       TemplateURL: !Ref TemplateURL
-      TimeoutInMinutes: '2'
+      TimeoutInMinutes: "2"
     DependsOn:
       - CreateLambdaDriverFunction
       - CreateLambdaS3ExportWorkerFunction
       - CloudWatchLogsKinesisRole
 Outputs:
   S3Output:
-    Value: !GetAtt 
+    Value: !GetAtt
       - AlertLogicS3AccessRole
       - Arn
     Description: >-

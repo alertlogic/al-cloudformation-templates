@@ -84,9 +84,15 @@ Resources:
               - - "arn:aws:s3:::"
                 - !Ref S3Bucket
           - Sid: AllowDecryptOfS3KMSKey
-            Effect: !If [NoKMS, "Deny", "Allow"]
-            Action: kms:Decrypt
-            Resource: !If [NoKMS, "arn:aws:kms:*:*:*", !Ref KMSKey]
+            Effect: !If
+              - NoKMS
+              - Deny
+              - Allow
+            Action: "kms:Decrypt"
+            Resource: !If
+              - NoKMS
+              - "arn:aws:kms:*:*:*"
+              - !Ref KMSKey
       Roles:
         - !Ref AlertLogicRole
       PolicyName: alertlogic-s3-log-collection-policy
