@@ -24,21 +24,21 @@ Parameters:
     MinLength: 2
     MaxLength: 1224
     Type: String
-    NoEcho: 'true'
+    NoEcho: "true"
 Mappings:
   AlertLogic:
     Datacenter:
-      US: 'arn:aws:iam::733251395267:root'
-      EU: 'arn:aws:iam::857795874556:root'
+      US: "arn:aws:iam::733251395267:root"
+      EU: "arn:aws:iam::857795874556:root"
 Resources:
   AlertLogicRole:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
+          - Action: "sts:AssumeRole"
             Condition:
               StringEquals:
-                'sts:ExternalId': !Ref ExternalID
+                "sts:ExternalId": !Ref ExternalID
             Effect: Allow
             Principal:
               AWS:
@@ -46,135 +46,131 @@ Resources:
                   - AlertLogic
                   - Datacenter
                   - !Ref AlertLogicDatacenter
-            Sid: ''
+            Sid: ""
         Version: 2012-10-17
       Path: /
       Policies:
         - PolicyDocument:
+            Version: "2012-10-17"
             Statement:
               - Sid: EnabledDiscoveryOfVariousAWSServices
+                Resource: "*"
                 Effect: Allow
                 Action:
-                  - 'autoscaling:Describe*'
-                  - 'cloudformation:DescribeStack*'
-                  - 'cloudformation:GetTemplate'
-                  - 'cloudformation:ListStack*'
-                  - 'cloudfront:Get*'
-                  - 'cloudfront:List*'
-                  - 'cloudtrail:DescribeTrails'
-                  - 'cloudtrail:GetTrailStatus'
-                  - 'cloudtrail:ListTags'
-                  - 'cloudtrail:LookupEvents'
-                  - 'cloudwatch:Describe*'
-                  - 'config:DeliverConfigSnapshot'
-                  - 'config:Describe*'
-                  - 'config:Get*'
-                  - 'config:ListDiscoveredResources'
-                  - 'cur:DescribeReportDefinitions'
-                  - 'directconnect:Describe*'
-                  - 'dynamodb:ListTables'
-                  - 'ec2:Describe*'
-                  - 'elasticbeanstalk:Describe*'
-                  - 'elasticache:Describe*'
-                  - 'elasticloadbalancing:Describe*'
-                  - 'elasticmapreduce:DescribeJobFlows'
-                  - 'events:Describe*'
-                  - 'events:List*'
-                  - 'glacier:ListVaults'
-                  - 'guardduty:Get*'
-                  - 'guardduty:List*'
-                  - 'kinesis:Describe*'
-                  - 'kinesis:List*'
-                  - 'kms:DescribeKey'
-                  - 'kms:GetKeyPolicy'
-                  - 'kms:GetKeyRotationStatus'
-                  - 'kms:ListAliases'
-                  - 'kms:ListGrants'
-                  - 'kms:ListKeys'
-                  - 'kms:ListKeyPolicies'
-                  - 'kms:ListResourceTags'
-                  - 'lambda:List*'
-                  - 'logs:Describe*'
-                  - 'rds:Describe*'
-                  - 'rds:DownloadDBLogFilePortion'
-                  - 'rds:ListTagsForResource'
-                  - 'redshift:Describe*'
-                  - 'route53:GetHostedZone'
-                  - 'route53:ListHostedZones'
-                  - 'route53:ListResourceRecordSets'
-                  - 'sdb:DomainMetadata'
-                  - 'sdb:ListDomains'
-                  - 'sns:ListSubscriptions'
-                  - 'sns:ListSubscriptionsByTopic'
-                  - 'sns:ListTopics'
-                  - 'sns:GetEndpointAttributes'
-                  - 'sns:GetSubscriptionAttributes'
-                  - 'sns:GetTopicAttributes'
-                  - 's3:ListAllMyBuckets'
-                  - 's3:ListBucket'
-                  - 's3:GetBucketLocation'
-                  - 's3:GetObject'
-                  - 's3:GetBucket*'
-                  - 's3:GetLifecycleConfiguration'
-                  - 's3:GetObjectAcl'
-                  - 's3:GetObjectVersionAcl'
-                  - 'tag:GetResources'
-                  - 'tag:GetTagKeys'
-                Resource: '*'
+                  - autoscaling:Describe*
+                  - cloudformation:DescribeStack*
+                  - cloudformation:GetTemplate
+                  - cloudformation:ListStack*
+                  - cloudfront:Get*
+                  - cloudfront:List*
+                  - cloudtrail:DescribeTrails
+                  - cloudtrail:GetTrailStatus
+                  - cloudtrail:ListTags
+                  - cloudtrail:LookupEvents
+                  - config:DeliverConfigSnapshot
+                  - config:Describe*
+                  - config:Get*
+                  - config:ListDiscoveredResources
+                  - cur:DescribeReportDefinitions
+                  - directconnect:Describe*
+                  - dynamodb:ListTables
+                  - ec2:Describe*
+                  - elasticbeanstalk:Describe*
+                  - elasticache:Describe*
+                  - elasticloadbalancing:Describe*
+                  - elasticmapreduce:DescribeJobFlows
+                  - events:Describe*
+                  - events:List*
+                  - glacier:ListVaults
+                  - guardduty:Get*
+                  - guardduty:List*
+                  - kinesis:Describe*
+                  - kinesis:List*
+                  - kms:DescribeKey
+                  - kms:GetKeyPolicy
+                  - kms:GetKeyRotationStatus
+                  - kms:ListAliases
+                  - kms:ListGrants
+                  - kms:ListKeys
+                  - kms:ListKeyPolicies
+                  - kms:ListResourceTags
+                  - lambda:List*
+                  - logs:Describe*
+                  - rds:Describe*
+                  - rds:ListTagsForResource
+                  - redshift:Describe*
+                  - route53:GetHostedZone
+                  - route53:ListHostedZones
+                  - route53:ListResourceRecordSets
+                  - sdb:DomainMetadata
+                  - sdb:ListDomains
+                  - sns:ListSubscriptions
+                  - sns:ListSubscriptionsByTopic
+                  - sns:ListTopics
+                  - sns:GetEndpointAttributes
+                  - sns:GetSubscriptionAttributes
+                  - sns:GetTopicAttributes
+                  - s3:ListAllMyBuckets
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:GetBucket*
+                  - s3:GetLifecycleConfiguration
+                  - s3:GetObjectAcl
+                  - s3:GetObjectVersionAcl
+                  - tag:GetResources
+                  - tag:GetTagKeys
               - Sid: EnableInsightDiscovery
+                Resource: "*"
                 Effect: Allow
                 Action:
-                  - 'iam:Get*'
-                  - 'iam:List*'
-                  - 'iam:ListRoles'
-                  - 'iam:GetRolePolicy'
-                  - 'iam:GetAccountSummary'
-                  - 'iam:GenerateCredentialReport'
-                Resource: '*'
+                  - iam:Get*
+                  - iam:List*
+                  - iam:ListRoles
+                  - iam:GetRolePolicy
+                  - iam:GetAccountSummary
+                  - iam:GenerateCredentialReport
               - Sid: EnableCloudTrailIfAccountDoesntHaveCloudTrailsEnabled
+                Resource: "*"
                 Effect: Allow
                 Action:
-                  - 'cloudtrail:*'
-                Resource: '*'
+                  - cloudtrail:*
               - Sid: CreateCloudTrailS3BucketIfCloudTrailsAreBeingSetupByAlertLogic
+                Resource: arn:aws:s3:::outcomesbucket-*
                 Effect: Allow
                 Action:
-                  - 's3:CreateBucket'
-                  - 's3:PutBucketPolicy'
-                  - 's3:DeleteBucket'
-                Resource: 'arn:aws:s3:::outcomesbucket-*'
+                  - s3:CreateBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucket
               - Sid: CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails
+                Resource: arn:aws:sns:*:*:outcomestopic
                 Effect: Allow
                 Action:
-                  - 'sns:CreateTopic'
-                  - 'sns:DeleteTopic'
-                Resource: 'arn:aws:sns:*:*:outcomestopic'
-              - Sid: >-
-                  MakeSureThatCloudTrailsSnsTopicIsSetupCorrectlyForCloudTrailPublishingAndSqsSubsription
+                  - sns:CreateTopic
+                  - sns:DeleteTopic
+              - Sid: MakeSureThatCloudTrailsSnsTopicIsSetupCorrectlyForCloudTrailPublishingAndSqsSubsription
+                Resource: arn:aws:sns:*:*:*
                 Effect: Allow
                 Action:
-                  - 'sns:addpermission'
-                  - 'sns:gettopicattributes'
-                  - 'sns:listtopics'
-                  - 'sns:settopicattributes'
-                  - 'sns:subscribe'
-                Resource: 'arn:aws:sns:*:*:*'
-              - Sid: >-
-                  CreateAlertLogicSqsQueueToSubscribeToCloudTrailsSnsTopicNotifications
+                  - sns:addpermission
+                  - sns:gettopicattributes
+                  - sns:listtopics
+                  - sns:settopicattributes
+                  - sns:subscribe
+              - Sid: CreateAlertLogicSqsQueueToSubscribeToCloudTrailsSnsTopicNotifications
+                Resource: arn:aws:sqs:*:*:outcomesbucket*
                 Effect: Allow
                 Action:
-                  - 'sqs:CreateQueue'
-                  - 'sqs:DeleteQueue'
-                  - 'sqs:SetQueueAttributes'
-                  - 'sqs:GetQueueAttributes'
-                  - 'sqs:ListQueues'
-                  - 'sqs:ReceiveMessage'
-                  - 'sqs:DeleteMessage'
-                  - 'sqs:GetQueueUrl'
-                Resource: 'arn:aws:sqs:*:*:outcomesbucket*'
-            Version: 2012-10-17
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:SetQueueAttributes
+                  - sqs:GetQueueAttributes
+                  - sqs:ListQueues
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueUrl
           PolicyName: alertlogic-cloudinsight-essentials-iam-policy
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
 Outputs:
   ExternalID:
     Description: External ID used by Alert Logic to assume your new Cross-Account IAM role.

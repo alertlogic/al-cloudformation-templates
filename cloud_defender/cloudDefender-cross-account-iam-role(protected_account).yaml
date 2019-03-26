@@ -22,29 +22,29 @@ Parameters:
     MinLength: 2
     MaxLength: 1224
     Type: String
-    NoEcho: 'true'
+    NoEcho: "true"
   KMSKey:
     Description: ARN of the KMS key used to encrypt the CloudTrail. If you are use centralized CloudTrail, enter the KMS key on the Receiving CFT instead of in this CFT.
     Type: String
-    Default: ''
+    Default: ""
 Mappings:
   AlertLogic:
     Datacenter:
-      US: 'arn:aws:iam::733251395267:root'
-      EU: 'arn:aws:iam::857795874556:root'
+      US: "arn:aws:iam::733251395267:root"
+      EU: "arn:aws:iam::857795874556:root"
 Conditions:
   NoKMS: !Equals
-    - ''
+    - ""
     - !Ref KMSKey
 Resources:
   AlertLogicRole:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
+          - Action: "sts:AssumeRole"
             Condition:
               StringEquals:
-                'sts:ExternalId': !Ref ExternalID
+                "sts:ExternalId": !Ref ExternalID
             Effect: Allow
             Principal:
               AWS:
@@ -52,84 +52,168 @@ Resources:
                   - AlertLogic
                   - Datacenter
                   - !Ref AlertLogicDatacenter
-            Sid: ''
+            Sid: ""
         Version: 2012-10-17
       Path: /
       Policies:
         - PolicyDocument:
             Statement:
-              - Sid: EnabledDiscoveryOfVariousAWSServices
+              - Action:
+                  - autoscaling:Describe*
+                  - cloudformation:DescribeStack*
+                  - cloudformation:GetTemplate
+                  - cloudformation:ListStack*
+                  - cloudfront:Get*
+                  - cloudfront:List*
+                  - cloudwatch:Describe*
+                  - config:DeliverConfigSnapshot
+                  - config:Describe*
+                  - config:Get*
+                  - config:ListDiscoveredResources
+                  - cur:DescribeReportDefinitions
+                  - directconnect:Describe*
+                  - dynamodb:ListTables
+                  - ec2:Describe*
+                  - elasticbeanstalk:Describe*
+                  - elasticache:Describe*
+                  - elasticloadbalancing:Describe*
+                  - elasticmapreduce:DescribeJobFlows
+                  - events:Describe*
+                  - events:List*
+                  - glacier:ListVaults
+                  - guardduty:Get*
+                  - guardduty:List*
+                  - kinesis:Describe*
+                  - kinesis:List*
+                  - kms:DescribeKey
+                  - kms:GetKeyPolicy
+                  - kms:GetKeyRotationStatus
+                  - kms:ListAliases
+                  - kms:ListGrants
+                  - kms:ListKeys
+                  - kms:ListKeyPolicies
+                  - kms:ListResourceTags
+                  - lambda:List*
+                  - logs:Describe*
+                  - rds:Describe*
+                  - rds:ListTagsForResource
+                  - redshift:Describe*
+                  - route53:GetHostedZone
+                  - route53:ListHostedZones
+                  - route53:ListResourceRecordSets
+                  - sdb:DomainMetadata
+                  - sdb:ListDomains
+                  - sns:ListSubscriptions
+                  - sns:ListSubscriptionsByTopic
+                  - sns:ListTopics
+                  - sns:GetEndpointAttributes
+                  - sns:GetSubscriptionAttributes
+                  - sns:GetTopicAttributes
+                  - s3:ListAllMyBuckets
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:GetBucket*
+                  - s3:GetLifecycleConfiguration
+                  - s3:GetObjectAcl
+                  - s3:GetObjectVersionAcl
+                  - tag:GetResources
+                  - tag:GetTagKeys
                 Effect: Allow
-                Action:
-                  - 'autoscaling:Describe*'
-                  - 'directconnect:Describe*'
-                  - 'elasticloadbalancing:Describe*'
-                  - 'ec2:Describe*'
-                  - 'rds:Describe*'
-                  - 'rds:DownloadDBLogFilePortion'
-                  - 'rds:ListTagsForResource'
-                  - 's3:ListAllMyBuckets'
-                  - 's3:ListBucket'
-                  - 's3:GetBucketLocation'
-                  - 's3:GetObject'
-                  - 's3:GetBucket*'
-                  - 's3:GetObjectAcl'
-                  - 's3:GetObjectVersionAcl'
-                Resource: '*'
-              - Sid: EnableCloudTrailIfAccountDoesntHaveCloudTrailsEnabled
+                Resource: "*"
+                Sid: EnabledDiscoveryOfVariousAWSServices
+              - Action:
+                  - iam:Get*
+                  - iam:List*
+                  - iam:ListRoles
+                  - iam:GetRolePolicy
+                  - iam:GetAccountSummary
+                  - iam:GenerateCredentialReport
                 Effect: Allow
-                Action:
-                  - 'cloudtrail:*'
-                Resource: '*'
-              - Sid: CreateCloudTrailS3BucketIfCloudTrailsAreBeingSetupByAlertLogic
+                Resource: "*"
+                Sid: EnableInsightDiscovery
+              - Action:
+                  - cloudtrail:DescribeTrails
+                  - cloudtrail:GetEventSelectors
+                  - cloudtrail:GetTrailStatus
+                  - cloudtrail:ListPublicKeys
+                  - cloudtrail:ListTags
+                  - cloudtrail:LookupEvents
+                  - cloudtrail:StartLogging
+                  - cloudtrail:UpdateTrail
                 Effect: Allow
-                Action:
-                  - 's3:CreateBucket'
-                  - 's3:PutBucketPolicy'
-                  - 's3:DeleteBucket'
-                Resource: 'arn:aws:s3:::outcomesbucket-*'
-              - Sid: CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails
+                Resource: "*"
+                Sid: EnableCloudTrailIfAccountDoesntHaveCloudTrailsEnabled
+              - Action:
+                  - s3:CreateBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucket
                 Effect: Allow
-                Action:
-                  - 'sns:CreateTopic'
-                  - 'sns:DeleteTopic'
-                Resource: 'arn:aws:sns:*:*:outcomestopic'
-              - Sid: >-
-                  MakeSureThatCloudTrailsSnsTopicIsSetupCorrectlyForCloudTrailPublishingAndSqsSubsription
+                Resource: arn:aws:s3:::outcomesbucket-*
+                Sid: CreateCloudTrailS3BucketIfCloudTrailsAreBeingSetupByAlertLogic
+              - Action:
+                  - sns:CreateTopic
+                  - sns:DeleteTopic
                 Effect: Allow
-                Action:
-                  - 'sns:addpermission'
-                  - 'sns:gettopicattributes'
-                  - 'sns:listtopics'
-                  - 'sns:settopicattributes'
-                  - 'sns:subscribe'
-                Resource: 'arn:aws:sns:*:*:*'
-              - Sid: BeAbleToValidateOurRoleAndDiscoverIAM
+                Resource: arn:aws:sns:*:*:outcomestopic
+                Sid: CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails
+              - Action:
+                  - sns:addpermission
+                  - sns:gettopicattributes
+                  - sns:listtopics
+                  - sns:settopicattributes
+                  - sns:subscribe
                 Effect: Allow
-                Action:
-                  - 'iam:List*'
-                  - 'iam:Get*'
-                Resource: '*'
-              - Sid: >-
-                  CreateAlertLogicSqsQueueToSubscribeToCloudTrailsSnsTopicNotifications
+                Resource: arn:aws:sns:*:*:*
+                Sid: MakeSureThatCloudTrailsSnsTopicIsSetupCorrectlyForCloudTrailPublishingAndSqsSubsription
+              - Action:
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:SetQueueAttributes
+                  - sqs:GetQueueAttributes
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueUrl
                 Effect: Allow
-                Action:
-                  - 'sqs:CreateQueue'
-                  - 'sqs:DeleteQueue'
-                  - 'sqs:SetQueueAttributes'
-                  - 'sqs:GetQueueAttributes'
-                  - 'sqs:ListQueues'
-                  - 'sqs:ReceiveMessage'
-                  - 'sqs:DeleteMessage'
-                  - 'sqs:GetQueueUrl'
-                Resource: 'arn:aws:sqs:*:*:outcomesbucket*'
-              - Sid: AllowDecryptOfCloudTrailKey
+                Resource: arn:aws:sqs:*:*:outcomesbucket*
+                Sid: CreateAlertLogicSqsQueueToSubscribeToCloudTrailsSnsTopicNotifications
+              - Action:
+                  - sqs:ListQueues
                 Effect: Allow
-                Action: kms:Decrypt
-                Resource: !If [NoKMS, 'arn:aws:kms:*:*:key/nonexistent-key', !Ref KMSKey]
-            Version: 2012-10-17
+                Resource: "*"
+                Sid: BeAbleToListSQSForCloudTrail
+              - Action:
+                  - ec2:GetConsoleOutput
+                  - ec2:GetConsoleScreenShot
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                  - ec2:TerminateInstances
+                Condition:
+                  StringEquals:
+                    ec2:ResourceTag/AlertLogic: Security
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:instance/*
+                Sid: EnableAlertLogicApplianceStateManagement
+              - Action:
+                  - autoscaling:UpdateAutoScalingGroup
+                Condition:
+                  StringEquals:
+                    ec2:ResourceTag/AlertLogic: Security
+                Effect: Allow
+                Resource: arn:aws:autoscaling:*:*:autoScalingGroup/*
+                Sid: EnableAlertLogicAutoScalingGroupManagement
+              - Action: kms:Decrypt
+                Sid: AllowDecryptOfCloudTrailKey
+                Effect: Allow
+                Resource:
+                  !If [
+                    NoKMS,
+                    "arn:aws:kms:*:*:key/nonexistent_key",
+                    !Ref KMSKey,
+                  ]
+            Version: "2012-10-17"
           PolicyName: alertlogic-clouddefender-iam-policy
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
 Outputs:
   ExternalID:
     Description: External ID used by Alert Logic to assume your new Cross-Account IAM role.
