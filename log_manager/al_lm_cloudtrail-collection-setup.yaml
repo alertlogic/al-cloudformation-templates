@@ -24,6 +24,14 @@ Parameters:
     Description: >-
       ARN of an existing CloudTrail topic to subscribe SQS to. Create the stack in the region where the SNS Topic exists.
     Type: String
+  S3DataEvents:
+    Description: >-
+      Record data events of all S3 buckets? Additional CloudTrail charges apply.
+    Type: String
+    AllowedValues:
+    - true
+    - false
+    Default: false
   QueueName:
     Description: >-
       Name of the SQS Queue to create. CloudTrail's SNS Topic will Send Messages to this Queue and LogManager will Receive Messages from it.
@@ -54,6 +62,9 @@ Conditions:
   NoKMS: !Equals
     - ""
     - !Ref KMSKey
+  IsS3DataEvents: !Equals 
+    - true 
+    - !Ref S3DataEvents
 Metadata:
   "AWS::CloudFormation::Interface":
     ParameterGroups:
@@ -246,6 +257,7 @@ Resources:
     Type: "AWS::CloudTrail::Trail"
     Condition: CreateCloudTrail
     Properties:
+      EventSelectors: !If [IsS3DataEvents, [{DataResources: [{Type: 'AWS::S3::Object', Values: ['arn:aws:s3:::']}], IncludeManagementEvents: true, ReadWriteType: All}], !Ref 'AWS::NoValue']
       IsMultiRegionTrail: true
       IncludeGlobalServiceEvents: true
       IsLogging: true
