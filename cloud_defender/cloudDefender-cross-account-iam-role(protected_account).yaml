@@ -74,6 +74,8 @@ Resources:
                   - directconnect:Describe*
                   - dynamodb:ListTables
                   - ec2:Describe*
+                  - ecs:Describe*
+                  - ecs:List*
                   - elasticbeanstalk:Describe*
                   - elasticache:Describe*
                   - elasticloadbalancing:Describe*
@@ -119,15 +121,14 @@ Resources:
                   - s3:GetObjectVersionAcl
                   - tag:GetResources
                   - tag:GetTagKeys
+                  - workspaces:Describe*
+                  - workspaces:List*
                 Effect: Allow
                 Resource: "*"
                 Sid: EnabledDiscoveryOfVariousAWSServices
               - Action:
                   - iam:Get*
                   - iam:List*
-                  - iam:ListRoles
-                  - iam:GetRolePolicy
-                  - iam:GetAccountSummary
                   - iam:GenerateCredentialReport
                 Effect: Allow
                 Resource: "*"
